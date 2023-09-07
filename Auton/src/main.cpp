@@ -67,17 +67,22 @@ int main() {
       FrontLeft.setVelocity(leftMotorSpeed, percent);
       BackLeft.setVelocity(leftMotorSpeed, percent);
     }
+
+    // INTAKE
     if (Controller1.ButtonUp.pressing()) {
       intakeMode = true;
     } else if (Controller1.ButtonDown.pressing()) {
       intakeMode = false;
     }
+
+    // SINGLE CATAPULT CYCLE
     if (Controller1.ButtonR1.pressing()) {
       Catapult.spinFor(directionType::fwd, 150, rotationUnits::deg, 100, velocityUnits::pct, false);
     } else if (Controller1.ButtonR2.pressing()) {
         Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, false);
     }
 
+    // OUTTAKE
     if(Controller1.ButtonL1.pressing()) {
         Intake.spin(fwd);
     } else if (Controller1.ButtonL2.pressing()) {
@@ -85,6 +90,9 @@ int main() {
     } else {
         Intake.stop();
     }
+
+    // CATAPULT HOLD
+    if(Controller1.ButtonA.pressing())
 
     // Set the speed of the right motor. If the value is less than the deadband,
     // set it to zero.
