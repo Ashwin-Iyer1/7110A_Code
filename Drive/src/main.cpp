@@ -65,8 +65,8 @@ int main() {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position()-Controller1.Axis1.position());
-    int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position()+Controller1.Axis1.position());
+    int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
+    int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
 
     /*if(Launcher1.velocity(rpm)!=0) {
       e = Launcher1.velocity(rpm)-350;
