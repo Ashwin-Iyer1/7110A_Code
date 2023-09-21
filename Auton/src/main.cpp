@@ -29,7 +29,89 @@ motor Catapult = motor(PORT10, ratio36_1, true);
 motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT5);  
 
+float gearRatio = 36.0/60.0;
+float wheelDiameter = 3.25;
+bool smartTurn(float rot) {
+  float e = 0;
+  float d = 0;
+  float i = 0;
+  float eRec = 0;
+  float kp = 0.75;
+  float kd = 0;
+  float ki = 0;
+  float dt = 0.05;
+  double currAngle = inertialSensor.rotation(deg);
+  double wantedAngle = currAngle + rot;
+  e = wantedAngle-inertialSensor.rotation(deg);
+  while( abs(e) + abs(d) > 2) {
+    e = wantedAngle-inertialSensor.rotation(deg);
+    d = (e-eRec)/dt;
+    i += e*dt;
+    eRec = e;
+    float speed = kp*e + kd*d + ki*i;
+    FrontLeft.setVelocity(speed,pct);
+    BackLeft.setVelocity(speed,pct);
+    FrontRight.setVelocity(-speed,pct);
+    BackRight.setVelocity(-speed,pct);
+    FrontLeft.spin(fwd);
+    BackLeft.spin(fwd);
+    FrontRight.spin(fwd);
+    BackRight.spin(fwd);
+    wait(dt,sec);
+  }
+  FrontLeft.stop();
+  BackLeft.stop();
+  FrontRight.stop();
+  BackRight.stop();
+  //setDriveSpeed(maxVelocity);
+  return true;
+}
+void straight(float dist, distanceUnits units) {
+  if(units==distanceUnits::mm) {
+    dist*=0.0393701;
+  }
+  if(units==distanceUnits::cm) {
+    dist*=0.393701;
+  }
+  float rotation = (dist/(wheelDiameter * M_PI)*360) / gearRatio;
+  FrontLeft.spinFor(rotation, deg, false);
+  BackLeft.spinFor(rotation,deg, false);
+  FrontRight.spinFor(rotation,deg, false);
+  BackRight.spinFor(rotation,deg, true);
+}
+void straight(float dist, float speed) {
+  FrontLeft.setVelocity(speed,pct);
+  FrontRight.setVelocity(speed,pct);
+  BackLeft.setVelocity(speed,pct);
+  BackRight.setVelocity(speed,pct);
+  straight(dist,distanceUnits::in);
+}
+void straight(float dist) {
+  straight(dist,50);
+}
+
 int main() {
+  inertialSensor.calibrate();
+  while (inertialSensor.isCalibrating()) {
+    wait(100, msec);
+  } 
+  Intake.setVelocity(50,pct);
+  straight(25);
+  Intake.spinFor(1,sec);
+  straight(-26.7);
+  smartTurn(90);
+  straight(48);
+  smartTurn(90);
+  //straight(-2);
+  Intake.setVelocity(-100,pct);
+  Intake.spinFor(1,sec);
+  straight(-8,100);
+  smartTurn(540);
+  straight(-18,100);
+
+
+}
+int drive() {
     Intake.setVelocity(100,pct);
     //inertialSensor.calibrate();
     //waitUntil(!inertialSensor.isCalibrating());

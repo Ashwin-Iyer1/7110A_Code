@@ -15,14 +15,14 @@
 	},
 	"configurations": [
 		{
-			"name": "Win32",
+			"name": "windows-gcc-x64",
 			"includePath": [
-				"${vex_sdkIncludes}"
+				"${workspaceFolder}/**"
 			],
-			"compilerPath": "${vex_compilerPath}",
-			"cStandard": "gnu99",
-			"cppStandard": "gnu++11",
-			"intelliSenseMode": "windows-clang-x86"
+			"compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.36.32532/bin/Hostx64/x64/cl.exe",
+			"cStandard": "${default}",
+			"cppStandard": "${default}",
+			"intelliSenseMode": "${default}"
 		},
 		{
 			"name": "Mac",
