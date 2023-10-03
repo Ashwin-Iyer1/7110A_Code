@@ -17,22 +17,12 @@
 		{
 			"name": "Win32",
 			"includePath": [
-				"${vex_sdkIncludes}",
-				"c:\\Users\\s611863\\Downloads\\Github Codes\\7110A_Code\\Drive\\include"
+				"${vex_sdkIncludes}"
 			],
-			"compilerPath": "c:\\Users\\s611863\\AppData\\Roaming\\Code\\User\\globalStorage\\sigbots.pros\\install\\pros-toolchain-windows\\usr\\bin\\arm-none-eabi-g++",
+			"compilerPath": "${vex_compilerPath}",
 			"cStandard": "gnu99",
 			"cppStandard": "gnu++11",
-			"intelliSenseMode": "gcc-arm",
-			"compileCommands": "c:\\Users\\s611863\\Downloads\\Github Codes\\7110A_Code\\Drive\\compile_commands.json",
-			"browse": {
-				"path": [
-					"c:\\Users\\s611863\\Downloads\\Github Codes\\7110A_Code\\Drive"
-				],
-				"limitSymbolsToIncludedHeaders": true,
-				"databaseFilename": ""
-			},
-			"configurationProvider": "ms-vscode.makefile-tools"
+			"intelliSenseMode": "windows-clang-x86"
 		},
 		{
 			"name": "Mac",
