@@ -30,10 +30,38 @@ motor BackRight = motor(PORT4, ratio6_1, false);
 motor Catapult = motor(PORT10, ratio36_1, true);
 motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT5);  
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.A); 
 rotation rotationSensor = rotation(PORT1);
+
+bool catatoggle = false;
+void toggleCata() {
+    
+    Controller1.Screen.print(Catapult.isSpinning());
+    if(abs(Catapult.velocity(rpm) )>0) {
+        Catapult.stop();
+    } else {
+        Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+    }
+}
+void stopCata() {
+    Catapult.stop();
+}
+void toggleWings() {
+  Wings.set(!Wings.value());
+}
 
 float gearRatio = 36.0/60.0;
 float wheelDiameter = 3.25;
+float wheelRadius = wheelDiameter/2;
+float robotRadius = 6.25;
+double driveRotationConstant = 0.8721445746*1.054572148;
+void simpleTurn(float deg) {
+  float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
+  FrontLeft.spinFor(fwd, dist, vex::deg, false);
+  BackLeft.spinFor(fwd, dist, vex::deg, false);
+  FrontRight.spinFor(reverse, dist, vex::deg, false);
+  BackRight.spinFor(reverse, dist, vex::deg, true);
+}
 bool smartTurn(float rot) {
   float e = 0;
   float d = 0;
@@ -103,21 +131,25 @@ void pre_auton(void) {
 
 void autonomous(void) {
   Intake.setVelocity(50,pct);
-  
+  straight(48);
+  smartTurn(90);
+  Intake.setVelocity(-75,pct);
+  Intake.spinFor(1.5,sec);
+  straight(-8,100);
+  smartTurn(180);
+  straight(-18,100);
 
 }
 
 void usercontrol(void) {
-      Intake.setVelocity(100, pct);
-      FrontLeft.stop();
-      FrontRight.stop();
-      BackLeft.stop();
-      BackRight.stop();
-    //inertialSensor.calibrate();
-    //waitUntil(!inertialSensor.isCalibrating());
-    int deadband = 5;
-    bool intakeMode = false;
-    rotationSensor.setPosition(0, deg);
+  Intake.setVelocity(100,pct);
+  //inertialSensor.calibrate();
+  //waitUntil(!inertialSensor.isCalibrating());
+  int deadband = 5;
+  bool intakeMode = false;
+  Controller1.ButtonB.pressed(toggleCata);
+  Controller1.ButtonA.released(stopCata);
+  Controller1.ButtonY.pressed(toggleWings);
   while (true) {
     //tank drive
 
@@ -128,10 +160,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position()-Controller1.Axis1.position());
-    int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position()+Controller1.Axis1.position());
-    Brain.Screen.print(leftMotorSpeed);
-    Brain.Screen.newLine();
+    int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
+    int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
 
     /*if(Launcher1.velocity(rpm)!=0) {
       e = Launcher1.velocity(rpm)-350;
@@ -164,15 +194,30 @@ void usercontrol(void) {
 
     // SINGLE CATAPULT CYCLE
     if (Controller1.ButtonR1.pressing()) {
-      // Catapult.spinFor(directionType::fwd, 150, rotationUnits::deg, 100, velocityUnits::pct, false);
-      while(rotationSensor.position(deg) < 65) {
-        Catapult.spin(fwd, 100, pct);
-        wait(20, msec);
-      }
-      Catapult.stop();
-
+      Catapult.spinFor(directionType::fwd, 150, rotationUnits::deg, 100, velocityUnits::pct, false);
+      Brain.Screen.print("Down");
     } else if (Controller1.ButtonR2.pressing()) {
-        Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, false);
+        Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
+        Brain.Screen.print("Up");
+
+    } 
+    /*
+    else if (Controller1.ButtonB.pressing()) {
+        if (catatoggle) {
+            catatoggle = false;
+            Catapult.stop();
+            Brain.Screen.print("Catatoggle stop");
+
+        } else {
+            catatoggle = true;
+            Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+            Brain.Screen.print("Catatoggle");
+        }
+        
+    }*/ else if(Controller1.ButtonA.pressing()) {
+        Catapult.spin(directionType::fwd, 50, velocityUnits::pct);
+        //Brain.Screen.print("Hold");
+        // Brain.Screen.clearScreen();
     }
 
     // OUTTAKE
@@ -184,11 +229,29 @@ void usercontrol(void) {
         Intake.stop();
     }
 
-    // CATAPULT HOLD
-    if(Controller1.ButtonA.pressing())
+    // // CATAPULT HOLD
+    // if(Controller1.ButtonA.pressing()) {
+    //     Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+    // } else if (!(Controller1.ButtonR1.pressing()) || catatoggle != true) {
+    //     Catapult.stop();
+    //     Brain.Screen.print("Um akshully this motor should um stop");
+    //     Brain.Screen.newLine();
+    // }
+
+    // // CATAPULT TOGGLE
+    // if (Controller1.ButtonB.pressing()) {
+    //     if (catatoggle) {
+    //         catatoggle = false;
+    //         Catapult.stop();
+    //     } else {
+    //         catatoggle = true;
+    //         Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+    //         Brain.Screen.clearScreen();
+    //     }
+    // }
 
     // Set the speed of the right motor. If the value is less than the deadband,
-    // set it to zero.
+    // set it to zero   .
     if (abs(rightMotorSpeed) < deadband) {
       // Set the speed to zero
       FrontRight.setVelocity(0, percent);
