@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       s611863                                                   */
+/*    Author:       s617995                                                   */
 /*    Created:      10/3/2023, 8:15:04 AM                                     */
 /*    Description:  V5 project                                                */
 /*                                                                            */
@@ -126,6 +126,7 @@ void pre_auton(void) {
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
+  Catapult.setStopping(brakeType::coast);
   Intake.setVelocity(50,pct);
   FrontLeft.setVelocity(100,pct);
   BackLeft.setVelocity(100,pct);

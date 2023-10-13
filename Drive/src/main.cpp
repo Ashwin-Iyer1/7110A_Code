@@ -47,6 +47,7 @@ void toggleWings() {
   Wings.set(!Wings.value());
 }
 int main() {
+    Catapult.setStopping(brakeType::coast);
     Intake.setVelocity(100,pct);
     //inertialSensor.calibrate();
     //waitUntil(!inertialSensor.isCalibrating());

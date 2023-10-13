@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/krish/7110A_Code/Drive",
-      "program": "c:/Users/krish/7110A_Code/Drive/build/Debug/outDebug",
+      "cwd": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/CompetitionLeft/src",
+      "program": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/CompetitionLeft/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

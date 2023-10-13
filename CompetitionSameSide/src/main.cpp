@@ -126,7 +126,12 @@ void pre_auton(void) {
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
+  Catapult.setStopping(brakeType::coast);
   Intake.setVelocity(50,pct);
+  FrontLeft.setVelocity(100,pct);
+  BackLeft.setVelocity(100,pct);
+  FrontRight.setVelocity(100,pct);
+  BackRight.setVelocity(100,pct);
 }
 
 void autonomous(void) {
