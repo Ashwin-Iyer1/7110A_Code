@@ -27,25 +27,47 @@ motor FrontLeft = motor(PORT6, ratio6_1, true);
 motor FrontRight = motor(PORT2, ratio6_1, false);
 motor BackLeft = motor(PORT3, ratio6_1, true);
 motor BackRight = motor(PORT4, ratio6_1, false);
-motor Catapult = motor(PORT10, ratio36_1, true);
+motor Catapult1 = motor(PORT10, ratio36_1, true);
+motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT5);  
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A); 
 rotation rotationSensor = rotation(PORT1);
 
 bool catatoggle = false;
+void stopCata() {
+    Catapult1.stop();
+    Catapult2.stop();
+}
+
+void bringCataDown(float angle) {
+  while (rotationSensor.position(deg) > angle) {
+        Catapult1.spin(fwd);
+        Catapult2.spin(fwd);
+        wait(20, msec);
+      }
+      stopCata();
+}
+void bringCataDown() {
+  bringCataDown(140);
+}
+void cataMatchLoad() {
+  bringCataDown(160);
+}
 void toggleCata() {
     
-    Controller1.Screen.print(Catapult.isSpinning());
-    if(abs(Catapult.velocity(rpm) )>0) {
-        Catapult.stop();
+    Controller1.Screen.print(Catapult1.isSpinning());
+    if(abs(Catapult1.velocity(rpm) )>0) {
+        bringCataDown();
+        Catapult1.stop();
+        Catapult2.stop();
     } else {
-        Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
+        Catapult2.spin(directionType::fwd, 100, velocityUnits::pct);
     }
 }
-void stopCata() {
-    Catapult.stop();
-}
+
+
 void toggleWings() {
   Wings.set(!Wings.value());
 }
@@ -126,7 +148,8 @@ void pre_auton(void) {
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
-  Catapult.setStopping(brakeType::coast);
+  Catapult1.setStopping(brakeType::coast);
+  Catapult2.setStopping(brakeType::coast);
   Intake.setVelocity(50,pct);
   FrontLeft.setVelocity(100,pct);
   BackLeft.setVelocity(100,pct);
@@ -165,6 +188,7 @@ void usercontrol(void) {
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
+  Controller1.ButtonLeft.pressed(cataMatchLoad);
   while (true) {
     //tank drive
 
@@ -207,12 +231,15 @@ void usercontrol(void) {
       intakeMode = false;
     }
 
-    // SINGLE CATAPULT CYCLE
+    // SINGLE Catapult1 CYCLE
     if (Controller1.ButtonR1.pressing()) {
-      Catapult.spinFor(directionType::fwd, 150, rotationUnits::deg, 100, velocityUnits::pct, false);
+      bringCataDown();
       Brain.Screen.print("Down");
     } else if (Controller1.ButtonR2.pressing()) {
-        Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
+        Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
+        Catapult2.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+        bringCataDown();
+        stopCata();
         Brain.Screen.print("Up");
 
     } 
@@ -220,17 +247,18 @@ void usercontrol(void) {
     else if (Controller1.ButtonB.pressing()) {
         if (catatoggle) {
             catatoggle = false;
-            Catapult.stop();
+            Catapult1.stop();
             Brain.Screen.print("Catatoggle stop");
 
         } else {
             catatoggle = true;
-            Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+            Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
             Brain.Screen.print("Catatoggle");
         }
         
     }*/ else if(Controller1.ButtonA.pressing()) {
-        Catapult.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
         //Brain.Screen.print("Hold");
         // Brain.Screen.clearScreen();
     }
@@ -244,23 +272,23 @@ void usercontrol(void) {
         Intake.stop();
     }
 
-    // // CATAPULT HOLD
+    // // Catapult1 HOLD
     // if(Controller1.ButtonA.pressing()) {
-    //     Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+    //     Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
     // } else if (!(Controller1.ButtonR1.pressing()) || catatoggle != true) {
-    //     Catapult.stop();
+    //     Catapult1.stop();
     //     Brain.Screen.print("Um akshully this motor should um stop");
     //     Brain.Screen.newLine();
     // }
 
-    // // CATAPULT TOGGLE
+    // // Catapult1 TOGGLE
     // if (Controller1.ButtonB.pressing()) {
     //     if (catatoggle) {
     //         catatoggle = false;
-    //         Catapult.stop();
+    //         Catapult1.stop();
     //     } else {
     //         catatoggle = true;
-    //         Catapult.spin(directionType::fwd, 100, velocityUnits::pct);
+    //         Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
     //         Brain.Screen.clearScreen();
     //     }
     // }
