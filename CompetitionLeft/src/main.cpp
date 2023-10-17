@@ -62,8 +62,8 @@ void toggleCata() {
         Catapult1.stop();
         Catapult2.stop();
     } else {
-        Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
-        Catapult2.spin(directionType::fwd, 100, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
     }
 }
 
