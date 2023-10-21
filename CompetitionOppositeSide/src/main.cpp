@@ -164,19 +164,14 @@ void brakeAll() {
 }
 
 void autonomous(void) {
-  brakeAll();
-  toggleWings();
-  wait(1,sec);
-  straight(-4);
-  simpleTurn(180);
-  toggleWings();
-  straight(-12);
+  Intake.setVelocity(50,pct);
+  straight(48);
   smartTurn(90);
-  toggleWings();
-  straight(-50);
-  
-
-
+  Intake.setVelocity(-75,pct);
+  Intake.spinFor(1.5,sec);
+  straight(-8,100);
+  smartTurn(180);
+  straight(-18,100);
 }
 
 void usercontrol(void) {

@@ -172,16 +172,18 @@ void brakeAll() {
 }
 
 void autonomous(void) {
-  brakeAll();
-  toggleWings();
-  wait(1,sec);
-  straight(-4);
-  simpleTurn(180);
-  toggleWings();
-  straight(-12);
-  smartTurn(90);
-  toggleWings();
-  straight(-50);
+    bringCataDown();
+    straight(10);
+    toggleCata();
+    wait(40,sec);
+    stopCata();
+    
+    smartTurn(-20);
+    straight(-40);
+    smartTurn(-125);
+    straight(64);
+    smartTurn(180);
+    toggleWings();
 }
 
 void usercontrol(void) {

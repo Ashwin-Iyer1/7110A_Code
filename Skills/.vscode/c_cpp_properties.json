@@ -19,10 +19,10 @@
 			"includePath": [
 				"${workspaceFolder}/**"
 			],
-			"compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
+			"compilerPath": "gcc",
 			"cStandard": "${default}",
 			"cppStandard": "${default}",
-			"intelliSenseMode": "windows-clang-x64",
+			"intelliSenseMode": "windows-gcc-x64",
 			"compilerArgs": [
 				""
 			]

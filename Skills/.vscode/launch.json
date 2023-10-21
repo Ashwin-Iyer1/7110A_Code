@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/DataCollection/src",
-      "program": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/DataCollection/src/build/Debug/outDebug",
+      "cwd": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/Skills/src",
+      "program": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/Skills/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
