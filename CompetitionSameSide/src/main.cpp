@@ -172,16 +172,18 @@ void brakeAll() {
 }
 
 void autonomous(void) {
+  //Takes triball out of corner with wing and launches triball
   brakeAll();
+  bringCataDown();
   toggleWings();
   wait(1,sec);
-  straight(-6);
-  smartTurn(50);
+  straight(-4);
+  simpleTurn(190);
   toggleWings();
-  straight(-16);
+  straight(-20);
   smartTurn(90);
-  toggleWings();
-  straight(-50);
+  straight(-30);
+  cataMatchLoad();
 }
 
 void usercontrol(void) {
