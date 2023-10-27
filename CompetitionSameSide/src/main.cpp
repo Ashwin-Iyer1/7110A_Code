@@ -175,10 +175,10 @@ void autonomous(void) {
   brakeAll();
   toggleWings();
   wait(1,sec);
-  straight(-4);
-  simpleTurn(180);
+  straight(-6);
+  smartTurn(50);
   toggleWings();
-  straight(-12);
+  straight(-16);
   smartTurn(90);
   toggleWings();
   straight(-50);

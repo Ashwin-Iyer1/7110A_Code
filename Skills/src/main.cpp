@@ -70,8 +70,8 @@ void toggleCata() {
         Catapult1.stop();
         Catapult2.stop();
     } else {
-        Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
-        Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd, 65, velocityUnits::pct);
+        Catapult2.spin(directionType::fwd, 65, velocityUnits::pct);
     }
 }
 
@@ -177,13 +177,18 @@ void autonomous(void) {
     toggleCata();
     wait(40,sec);
     stopCata();
-    
-    smartTurn(-20);
-    straight(-40);
-    smartTurn(-125);
-    straight(64);
-    smartTurn(180);
+    bringCataDown();
+    straight(-20);
+
+    smartTurn(-55);
+    straight(-108);
+    smartTurn(90);
+    straight(-84);
+    smartTurn(90);
     toggleWings();
+    straight(-55);
+    smartTurn(-90);
+    straight(-18);
 }
 
 void usercontrol(void) {

@@ -48,11 +48,19 @@ void bringCataDown(float angle) {
       }
       stopCata();
 }
-void bringCataDown() {
-  bringCataDown(140);
+int bringCataDown() {
+  bringCataDown(148);
+  return 1;
 }
 void cataMatchLoad() {
   bringCataDown(160);
+}
+int fullCataCycle() {
+  Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
+  Catapult2.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+  bringCataDown();
+  stopCata();
+  return 1;
 }
 void toggleCata() {
     
@@ -142,6 +150,13 @@ void straight(float dist, float speed) {
 void straight(float dist) {
   straight(dist,50);
 }
+int shake() {
+  for(int i=0; i<3; i++) {
+    straight(1,100);
+    straight(-1,100); 
+  }
+  return 1;
+}
 
 void pre_auton(void) {
   inertialSensor.calibrate();
@@ -164,16 +179,28 @@ void brakeAll() {
 }
 
 void autonomous(void) {
+  vex::task run(bringCataDown);
   Intake.setVelocity(50,pct);
   straight(48);
   smartTurn(90);
   Intake.setVelocity(-75,pct);
-  Intake.spinFor(1.5,sec);
+  vex::task async(shake);
+  Intake.spinFor(4,sec);
   straight(-8,100);
   smartTurn(180);
-  straight(-18,100);
+  straight(-12,100);
+  
+  //code for touching elevation
+  straight(18);
+  smartTurn(90);
+  straight(-24);
+  smartTurn(90);
+  straight(-20);
+  toggleWings();
+  smartTurn(360);
+  straight(-10);
 }
-
+  
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
   //inertialSensor.calibrate();
@@ -228,14 +255,9 @@ void usercontrol(void) {
 
     // SINGLE Catapult1 CYCLE
     if (Controller1.ButtonR1.pressing()) {
-      bringCataDown();
-      Brain.Screen.print("Down");
+      vex::task run(bringCataDown);
     } else if (Controller1.ButtonR2.pressing()) {
-        Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
-        Catapult2.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
-        bringCataDown();
-        stopCata();
-        Brain.Screen.print("Up");
+        vex::task run(fullCataCycle);
 
     } 
     /*
