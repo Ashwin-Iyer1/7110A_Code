@@ -27,11 +27,13 @@ motor FrontLeft = motor(PORT6, ratio6_1, true);
 motor FrontRight = motor(PORT2, ratio6_1, false);
 motor BackLeft = motor(PORT3, ratio6_1, true);
 motor BackRight = motor(PORT4, ratio6_1, false);
+motor TopLeft = motor(PORT11, ratio6_1, false);
+motor TopRight = motor(PORT12, ratio6_1, true);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
-inertial inertialSensor = inertial(PORT5);  
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.A); 
+inertial inertialSensor = inertial(PORT5);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 rotation rotationSensor = rotation(PORT1);
 
 bool catatoggle = false;
@@ -112,18 +114,24 @@ bool smartTurn(float rot) {
     float speed = kp*e + kd*d + ki*i;
     FrontLeft.setVelocity(speed,pct);
     BackLeft.setVelocity(speed,pct);
+    TopLeft.setVelocity(speed, pct);
     FrontRight.setVelocity(-speed,pct);
     BackRight.setVelocity(-speed,pct);
+    TopRight.setVelocity(-speed,pct);
     FrontLeft.spin(fwd);
     BackLeft.spin(fwd);
+    TopLeft.spin(fwd);
     FrontRight.spin(fwd);
     BackRight.spin(fwd);
+    TopRight.spin(fwd);
     wait(dt,sec);
   }
   FrontLeft.stop();
   BackLeft.stop();
+  TopLeft.stop();
   FrontRight.stop();
   BackRight.stop();
+  TopRight.stop();
   //setDriveSpeed(maxVelocity);
   return true;
 }
@@ -137,14 +145,18 @@ void straight(float dist, distanceUnits units) {
   float rotation = (dist/(wheelDiameter * M_PI)*360) / gearRatio;
   FrontLeft.spinFor(rotation, deg, false);
   BackLeft.spinFor(rotation,deg, false);
+  TopLeft.spinFor(rotation, deg, false);
   FrontRight.spinFor(rotation,deg, false);
-  BackRight.spinFor(rotation,deg, true);
+  BackRight.spinFor(rotation,deg, false);
+  TopRight.spinFor(rotation, deg, true);
 }
 void straight(float dist, float speed) {
   FrontLeft.setVelocity(speed,pct);
   FrontRight.setVelocity(speed,pct);
   BackLeft.setVelocity(speed,pct);
   BackRight.setVelocity(speed,pct);
+  TopLeft.setVelocity(speed,pct);
+  TopRight.setVelocity(speed,pct);
   straight(dist,distanceUnits::in);
 }
 void straight(float dist) {
@@ -168,14 +180,18 @@ void pre_auton(void) {
   Intake.setVelocity(50,pct);
   FrontLeft.setVelocity(100,pct);
   BackLeft.setVelocity(100,pct);
+  TopLeft.setVelocity(100,pct);
   FrontRight.setVelocity(100,pct);
   BackRight.setVelocity(100,pct);
+  TopRight.setVelocity(100,pct);
 }
 void brakeAll() {
   FrontLeft.setStopping(brakeType::brake);
   FrontRight.setStopping(brakeType::brake);
   BackLeft.setStopping(brakeType::brake);
   BackRight.setStopping(brakeType::brake);
+  TopLeft.setStopping(brakeType::brake);
+  TopRight.setStopping(brakeType::brake);
 }
 
 void autonomous(void) {
@@ -238,12 +254,15 @@ void usercontrol(void) {
       // Set the speed to zero.
       FrontLeft.setVelocity(0, percent);
       BackLeft.setVelocity(0, percent);
+      TopLeft.setVelocity(0, percent);
       FrontRight.setVelocity(0, percent);
       BackRight.setVelocity(0, percent);
+      TopRight.setVelocity(0, percent);
     } else {
       // Set the speed to leftMotorSpeed
       FrontLeft.setVelocity(leftMotorSpeed, percent);
       BackLeft.setVelocity(leftMotorSpeed, percent);
+      TopLeft.setVelocity(leftMotorSpeed, percent);
     }
 
     // INTAKE
@@ -316,10 +335,12 @@ void usercontrol(void) {
       // Set the speed to zero
       FrontRight.setVelocity(0, percent);
       BackRight.setVelocity(0, percent);
+      TopRight.setVelocity(0, percent);
     } else {
       // Set the speed to rightMotorSpeed
       FrontRight.setVelocity(rightMotorSpeed, percent);
       BackRight.setVelocity(rightMotorSpeed, percent);
+      TopRight.setVelocity(rightMotorSpeed, percent);
     }
     /*if(Controller1.ButtonX.pressing()) {
       //Piston.set(false);
@@ -330,6 +351,8 @@ void usercontrol(void) {
     FrontRight.spin(forward);
     BackLeft.spin(forward);
     BackRight.spin(forward);
+    TopLeft.spin(forward);
+    TopRight.spin(forward);
 
     wait(25, msec);
   }
