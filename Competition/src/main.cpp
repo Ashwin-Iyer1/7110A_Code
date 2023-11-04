@@ -27,11 +27,13 @@ motor FrontLeft = motor(PORT6, ratio6_1, true);
 motor FrontRight = motor(PORT2, ratio6_1, false);
 motor BackLeft = motor(PORT3, ratio6_1, true);
 motor BackRight = motor(PORT4, ratio6_1, false);
+motor TopLeft = motor(PORT11, ratio6_1, false);
+motor TopRight = motor(PORT12, ratio6_1, true);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
-motor Intake = motor(PORT7, ratio6_1, true);
-inertial inertialSensor = inertial(PORT5);  
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.A); 
+motor Intake = motor(PORT7, ratio18_1, true);
+inertial inertialSensor = inertial(PORT5);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 rotation rotationSensor = rotation(PORT1);
 
 bool catatoggle = false;
@@ -85,6 +87,8 @@ float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
 double driveRotationConstant = 0.8721445746*1.054572148;
+
+//Currently inaccurate, will require tuning of driveRotationConstant
 void simpleTurn(float deg) {
   float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
   FrontLeft.spinFor(fwd, dist, vex::deg, false);
@@ -112,19 +116,24 @@ bool smartTurn(float rot) {
     float speed = kp*e + kd*d + ki*i;
     FrontLeft.setVelocity(speed,pct);
     BackLeft.setVelocity(speed,pct);
+    TopLeft.setVelocity(speed, pct);
     FrontRight.setVelocity(-speed,pct);
     BackRight.setVelocity(-speed,pct);
+    TopRight.setVelocity(-speed,pct);
     FrontLeft.spin(fwd);
     BackLeft.spin(fwd);
+    TopLeft.spin(fwd);
     FrontRight.spin(fwd);
     BackRight.spin(fwd);
+    TopRight.spin(fwd);
     wait(dt,sec);
   }
   FrontLeft.stop();
   BackLeft.stop();
+  TopLeft.stop();
   FrontRight.stop();
   BackRight.stop();
-  //setDriveSpeed(maxVelocity);
+  TopRight.stop();
   return true;
 }
 void straight(float dist, distanceUnits units) {
@@ -137,18 +146,30 @@ void straight(float dist, distanceUnits units) {
   float rotation = (dist/(wheelDiameter * M_PI)*360) / gearRatio;
   FrontLeft.spinFor(rotation, deg, false);
   BackLeft.spinFor(rotation,deg, false);
+  TopLeft.spinFor(rotation, deg, false);
   FrontRight.spinFor(rotation,deg, false);
-  BackRight.spinFor(rotation,deg, true);
+  BackRight.spinFor(rotation,deg, false);
+  TopRight.spinFor(rotation, deg, true);
 }
 void straight(float dist, float speed) {
   FrontLeft.setVelocity(speed,pct);
   FrontRight.setVelocity(speed,pct);
   BackLeft.setVelocity(speed,pct);
   BackRight.setVelocity(speed,pct);
+  TopLeft.setVelocity(speed,pct);
+  TopRight.setVelocity(speed,pct);
   straight(dist,distanceUnits::in);
 }
 void straight(float dist) {
   straight(dist,50);
+}
+//In case intake requires the robot to rock back and forth to outtake
+int shake() {
+  for(int i=0; i<3; i++) {
+    straight(1,100);
+    straight(-1,100); 
+  }
+  return 1;
 }
 
 void pre_auton(void) {
@@ -158,20 +179,45 @@ void pre_auton(void) {
   } 
   Catapult1.setStopping(brakeType::coast);
   Catapult2.setStopping(brakeType::coast);
-  Intake.setVelocity(100,pct);
+  Intake.setVelocity(50,pct);
   FrontLeft.setVelocity(100,pct);
   BackLeft.setVelocity(100,pct);
+  TopLeft.setVelocity(100,pct);
   FrontRight.setVelocity(100,pct);
   BackRight.setVelocity(100,pct);
+  TopRight.setVelocity(100,pct);
 }
 void brakeAll() {
   FrontLeft.setStopping(brakeType::brake);
   FrontRight.setStopping(brakeType::brake);
   BackLeft.setStopping(brakeType::brake);
   BackRight.setStopping(brakeType::brake);
+  TopLeft.setStopping(brakeType::brake);
+  TopRight.setStopping(brakeType::brake);
 }
-
-void autonomous(void) {
+void oppositeSide(void) {
+  vex::task run(bringCataDown);
+  Intake.setVelocity(50,pct);
+  straight(48);
+  smartTurn(90);
+  Intake.setVelocity(-75,pct);
+  vex::task async(shake);
+  Intake.spinFor(4,sec);
+  straight(-8,100);
+  smartTurn(180);
+  straight(-12,100);
+  
+  //code for touching elevation
+  straight(18);
+  smartTurn(90);
+  straight(-24);
+  smartTurn(90);
+  straight(-20);
+  toggleWings();
+  smartTurn(360);
+  straight(-10);
+}
+void sameSide(void) {
   //Takes triball out of corner with wing and launches triball
   brakeAll();
   bringCataDown();
@@ -185,13 +231,30 @@ void autonomous(void) {
   straight(-30);
   cataMatchLoad();
 }
+void programmingSkills(void) {
+  bringCataDown();
+  straight(10);
+  toggleCata();
+  wait(40,sec);
+  stopCata();
+  bringCataDown();
+  straight(-20);
 
+  smartTurn(-55);
+  straight(-108);
+  smartTurn(90);
+  straight(-84);
+  smartTurn(90);
+  toggleWings();
+  straight(-55);
+  smartTurn(-90);
+  straight(-18);
+}
+  
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
-  //inertialSensor.calibrate();
-  //waitUntil(!inertialSensor.isCalibrating());
   int deadband = 5;
-  bool intakeMode = false;
+  bool intakeMode = true;
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
@@ -209,59 +272,38 @@ void usercontrol(void) {
     int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
     int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
 
-    /*if(Launcher1.velocity(rpm)!=0) {
-      e = Launcher1.velocity(rpm)-350;
-      d = e-eRec;
-      i+=e;
-      eRec=e;
-      launcherSpeed = 350 - 150*(ki*i + ke*e + kd*d);
-    }*/
-    // Set the speed of the left motor. If the value is less than the deadband,
+    // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
     
     if (abs(leftMotorSpeed) < deadband) {
-      // Set the speed to zero.
       FrontLeft.setVelocity(0, percent);
       BackLeft.setVelocity(0, percent);
+      TopLeft.setVelocity(0, percent);
       FrontRight.setVelocity(0, percent);
       BackRight.setVelocity(0, percent);
+      TopRight.setVelocity(0, percent);
     } else {
-      // Set the speed to leftMotorSpeed
       FrontLeft.setVelocity(leftMotorSpeed, percent);
       BackLeft.setVelocity(leftMotorSpeed, percent);
+      TopLeft.setVelocity(leftMotorSpeed, percent);
     }
 
-    // INTAKE
+    // Drivetrain inversion
     if (Controller1.ButtonUp.pressing()) {
       intakeMode = true;
     } else if (Controller1.ButtonDown.pressing()) {
       intakeMode = false;
     }
 
-    // SINGLE Catapult1 CYCLE
+    // Single Catapult Cycle
     if (Controller1.ButtonR1.pressing()) {
       vex::task run(bringCataDown);
     } else if (Controller1.ButtonR2.pressing()) {
-      vex::task run(fullCataCycle);
-    } 
-    /*
-    else if (Controller1.ButtonB.pressing()) {
-        if (catatoggle) {
-            catatoggle = false;
-            Catapult1.stop();
-            Brain.Screen.print("Catatoggle stop");
+        vex::task run(fullCataCycle);
 
-        } else {
-            catatoggle = true;
-            Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
-            Brain.Screen.print("Catatoggle");
-        }
-        
-    }*/ else if(Controller1.ButtonA.pressing()) {
+    } else if(Controller1.ButtonA.pressing()) {
         Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
         Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
-        //Brain.Screen.print("Hold");
-        // Brain.Screen.clearScreen();
     }
 
     // OUTTAKE
@@ -273,47 +315,24 @@ void usercontrol(void) {
         Intake.stop();
     }
 
-    // // Catapult1 HOLD
-    // if(Controller1.ButtonA.pressing()) {
-    //     Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
-    // } else if (!(Controller1.ButtonR1.pressing()) || catatoggle != true) {
-    //     Catapult1.stop();
-    //     Brain.Screen.print("Um akshully this motor should um stop");
-    //     Brain.Screen.newLine();
-    // }
-
-    // // Catapult1 TOGGLE
-    // if (Controller1.ButtonB.pressing()) {
-    //     if (catatoggle) {
-    //         catatoggle = false;
-    //         Catapult1.stop();
-    //     } else {
-    //         catatoggle = true;
-    //         Catapult1.spin(directionType::fwd, 100, velocityUnits::pct);
-    //         Brain.Screen.clearScreen();
-    //     }
-    // }
-
-    // Set the speed of the right motor. If the value is less than the deadband,
+    // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
     if (abs(rightMotorSpeed) < deadband) {
-      // Set the speed to zero
       FrontRight.setVelocity(0, percent);
       BackRight.setVelocity(0, percent);
+      TopRight.setVelocity(0, percent);
     } else {
-      // Set the speed to rightMotorSpeed
       FrontRight.setVelocity(rightMotorSpeed, percent);
       BackRight.setVelocity(rightMotorSpeed, percent);
+      TopRight.setVelocity(rightMotorSpeed, percent);
     }
-    /*if(Controller1.ButtonX.pressing()) {
-      //Piston.set(false);
-      expansion();
-    }*/ 
-    // Spin both motors in the forward direction.
+    // Spin all drivetrain motors in the forward direction.
     FrontLeft.spin(forward);
     FrontRight.spin(forward);
     BackLeft.spin(forward);
     BackRight.spin(forward);
+    TopLeft.spin(forward);
+    TopRight.spin(forward);
 
     wait(25, msec);
   }
@@ -324,7 +343,9 @@ void usercontrol(void) {
 //
 int main() {
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(autonomous);
+  Competition.autonomous(oppositeSide);
+  //Competition.autonomous(sameSide);
+  //Competition.autonomous(programmingSkills);
   Competition.drivercontrol(usercontrol);
 
   // Run the pre-autonomous function.
