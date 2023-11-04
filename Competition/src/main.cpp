@@ -197,39 +197,62 @@ void brakeAll() {
 }
 void oppositeSide(void) {
   vex::task run(bringCataDown);
-  Intake.setVelocity(50,pct);
-  straight(48);
-  smartTurn(90);
-  Intake.setVelocity(-75,pct);
-  vex::task async(shake);
-  Intake.spinFor(4,sec);
-  straight(-8,100);
-  smartTurn(180);
-  straight(-12,100);
-  
-  //code for touching elevation
-  straight(18);
-  smartTurn(90);
-  straight(-24);
-  smartTurn(90);
-  straight(-20);
+  Intake.setVelocity(100,pct);
+  smartTurn(30);
+  Intake.spinFor(reverse, 0.5, sec);
+  smartTurn(-120);
+  straight(8);
   toggleWings();
-  smartTurn(360);
+  smartTurn(-45);
   straight(-10);
+  smartTurn(-45);
+  straight(-20);
+  straight(6);
+  smartTurn(90);
+  straight(28);
+  smartTurn(34);
+  Intake.spin(forward);
+  straight(20);
+  Intake.stop();
+  smartTurn(56);
+  straight(12);
+  smartTurn(90);
+  Intake.spin(reverse);
+  straight(36);
+  Intake.stop();
+  straight(-18);
+  smartTurn(-90);
+  Intake.spin(forward);
+  straight(8);
+  Intake.stop();
+  straight(-8);
+  smartTurn(90);
+  Intake.spin(reverse);
+  straight(18);
+  Intake.stop();
+
+  //code for touching elevation
+  /*
+  smartTurn(135);
+  straight(36);
+  smartTurn(45);
+  toggleWings();
+  straight(4);
+  */
 }
 void sameSide(void) {
-  //Takes triball out of corner with wing and launches triball
   brakeAll();
-  bringCataDown();
-  toggleWings();
-  wait(1,sec);
-  straight(-4);
-  simpleTurn(190);
-  toggleWings();
-  straight(-20);
-  smartTurn(90);
-  straight(-30);
-  cataMatchLoad();
+  vex::task run(bringCataDown);
+  smartTurn(-45);
+  straight(20);
+  smartTurn(45);
+  Intake.spin(reverse);
+  straight(16);
+  Intake.stop();
+  smartTurn(135);
+  straight(28);
+  smartTurn(-45);
+  straight(36);
 }
 void programmingSkills(void) {
   bringCataDown();
