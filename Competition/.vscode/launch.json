@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/CompetitionOppositeSide/src",
-      "program": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/CompetitionOppositeSide/src/build/Debug/outDebug",
+      "cwd": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/Competition/src",
+      "program": "c:/Users/krish/Documents/vex-vscode-projects/7110A_Code/Competition/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

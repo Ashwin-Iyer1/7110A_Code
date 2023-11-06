@@ -23,12 +23,12 @@ vex::brain       Brain;
 
 controller Controller1 = controller(primary);
 
-motor FrontLeft = motor(PORT6, ratio6_1, true);
-motor FrontRight = motor(PORT2, ratio6_1, false);
-motor BackLeft = motor(PORT3, ratio6_1, true);
-motor BackRight = motor(PORT4, ratio6_1, false);
-motor TopLeft = motor(PORT11, ratio6_1, false);
-motor TopRight = motor(PORT12, ratio6_1, true);
+motor FrontLeft = motor(PORT4, ratio6_1, true);
+motor FrontRight = motor(PORT3, ratio6_1, false);
+motor BackLeft = motor(PORT2, ratio6_1, true);
+motor BackRight = motor(PORT6, ratio6_1, false);
+motor TopLeft = motor(PORT12, ratio6_1, false);
+motor TopRight = motor(PORT11, ratio6_1, true);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
@@ -82,7 +82,7 @@ void toggleWings() {
   Wings.set(!Wings.value());
 }
 
-float gearRatio = 36.0/60.0;
+float gearRatio = 36.0/84.0;
 float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
@@ -136,6 +136,11 @@ bool smartTurn(float rot) {
   TopRight.stop();
   return true;
 }
+bool turnToHeading(float heading) {
+  float clockwiseRotation = inertialSensor.heading()+360-heading;
+  float counterRotation = inertialSensor.heading()-heading;
+  return smartTurn((clockwiseRotation < (-1*counterRotation)) ? clockwiseRotation : counterRotation);
+}
 void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::mm) {
     dist*=0.0393701;
@@ -177,15 +182,16 @@ void pre_auton(void) {
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
+  inertialSensor.resetHeading();
   Catapult1.setStopping(brakeType::coast);
   Catapult2.setStopping(brakeType::coast);
   Intake.setVelocity(50,pct);
-  FrontLeft.setVelocity(100,pct);
-  BackLeft.setVelocity(100,pct);
-  TopLeft.setVelocity(100,pct);
-  FrontRight.setVelocity(100,pct);
-  BackRight.setVelocity(100,pct);
-  TopRight.setVelocity(100,pct);
+  FrontLeft.setVelocity(50, percent);
+  BackLeft.setVelocity(50, percent);
+  TopLeft.setVelocity(50, percent);
+  FrontRight.setVelocity(50, percent);
+  BackRight.setVelocity(50, percent);
+  TopRight.setVelocity(50, percent);
 }
 void brakeAll() {
   FrontLeft.setStopping(brakeType::brake);
@@ -198,28 +204,26 @@ void brakeAll() {
 void oppositeSide(void) {
   vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
-  smartTurn(30);
+  smartTurn(39);
   Intake.spinFor(reverse, 0.5, sec);
-  smartTurn(-120);
-  straight(8);
+  smartTurn(-129);
+  straight(-8);
   toggleWings();
   smartTurn(-45);
   straight(-10);
-  smartTurn(-45);
-  straight(-20);
+  smartTurn(-22.5);
+  straight(-16);
   straight(6);
-  smartTurn(90);
-  straight(28);
-  smartTurn(34);
+  smartTurn(89);
   Intake.spin(forward);
-  straight(20);
+  straight(41);
+  smartTurn(75);
   Intake.stop();
-  smartTurn(56);
-  straight(12);
+  straight(5);
   smartTurn(90);
   Intake.spin(reverse);
-  straight(36);
-  Intake.stop();
+  straight(30);
+  /*
   straight(-18);
   smartTurn(-90);
   Intake.spin(forward);
@@ -227,10 +231,9 @@ void oppositeSide(void) {
   Intake.stop();
   straight(-8);
   smartTurn(90);
-  Intake.spin(reverse);
   straight(18);
   Intake.stop();
-
+*/
   //code for touching elevation
   /*
   smartTurn(135);
@@ -302,9 +305,6 @@ void usercontrol(void) {
       FrontLeft.setVelocity(0, percent);
       BackLeft.setVelocity(0, percent);
       TopLeft.setVelocity(0, percent);
-      FrontRight.setVelocity(0, percent);
-      BackRight.setVelocity(0, percent);
-      TopRight.setVelocity(0, percent);
     } else {
       FrontLeft.setVelocity(leftMotorSpeed, percent);
       BackLeft.setVelocity(leftMotorSpeed, percent);
@@ -365,14 +365,15 @@ void usercontrol(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+  // Run the pre-autonomous function.
+  pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(oppositeSide);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);
   Competition.drivercontrol(usercontrol);
 
-  // Run the pre-autonomous function.
-  pre_auton();
+  
 
   // Prevent main from exiting with an infinite loop.
   while (true) {
