@@ -65,8 +65,6 @@ int fullCataCycle() {
   return 1;
 }
 void toggleCata() {
-    
-    Controller1.Screen.print(Catapult1.isSpinning());
     if(abs(Catapult1.velocity(rpm) )>0) {
         bringCataDown();
         Catapult1.stop();
@@ -86,6 +84,10 @@ float gearRatio = 36.0/84.0;
 float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
+float drivetrainWidth = 14;
+float prevLeftRotation = 0;
+float prevRightRotation = 0;
+float orientation = 0;
 double driveRotationConstant = 0.8721445746*1.054572148;
 
 //Currently inaccurate, will require tuning of driveRotationConstant
@@ -140,6 +142,11 @@ bool turnToHeading(float heading) {
   float clockwiseRotation = inertialSensor.heading()+360-heading;
   float counterRotation = inertialSensor.heading()-heading;
   return smartTurn((clockwiseRotation < (-1*counterRotation)) ? clockwiseRotation : counterRotation);
+}
+void odomUpdate() {
+  float leftPos = (TopLeft.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius;
+  float rightPos = (TopRight.position(deg)-prevRightRotation)/180*M_PI * wheelRadius;
+  orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
 }
 void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::mm) {
@@ -356,7 +363,9 @@ void usercontrol(void) {
     BackRight.spin(forward);
     TopLeft.spin(forward);
     TopRight.spin(forward);
-
+    //test odom
+    odomUpdate();
+    Controller1.Screen.print("odom: %.2f inertial %.2f", orientation, inertialSensor.rotation());
     wait(25, msec);
   }
 }
