@@ -58,8 +58,7 @@ void cataMatchLoad() {
   bringCataDown(160);
 }
 int fullCataCycle() {
-  Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, false);
-  Catapult2.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+  Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
   bringCataDown();
   stopCata();
   return 1;
@@ -70,8 +69,8 @@ void toggleCata() {
         Catapult1.stop();
         Catapult2.stop();
     } else {
-        Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
-        Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd);
+        Catapult2.spin(directionType::fwd);
     }
 }
 
@@ -175,6 +174,23 @@ void straight(float dist, float speed) {
 void straight(float dist) {
   straight(dist,50);
 }
+//gives robot brain trauma
+void slam(directionType direction) {
+  FrontLeft.spin(direction);
+  BackLeft.spin(direction);
+  TopLeft.spin(direction);
+  FrontRight.spin(direction);
+  BackRight.spin(direction);
+  TopRight.spin(direction);
+  wait(0.15,sec);
+  waitUntil(TopLeft.velocity(pct)<10);
+  FrontLeft.stop();
+  BackLeft.stop();
+  TopLeft.stop();
+  FrontRight.stop();
+  BackRight.stop();
+  TopRight.stop();
+}
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
   for(int i=0; i<3; i++) {
@@ -192,6 +208,7 @@ void pre_auton(void) {
   inertialSensor.resetHeading();
   Catapult1.setStopping(brakeType::coast);
   Catapult2.setStopping(brakeType::coast);
+  Catapult1.setVelocity(100,pct);
   Intake.setVelocity(50,pct);
   FrontLeft.setVelocity(50, percent);
   BackLeft.setVelocity(50, percent);
@@ -211,36 +228,34 @@ void brakeAll() {
 void oppositeSide(void) {
   vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
-  smartTurn(39);
+  turnToHeading(39);
   Intake.spinFor(reverse, 0.5, sec);
-  smartTurn(-129);
+  turnToHeading(270);
   straight(-8);
   toggleWings();
-  smartTurn(-45);
+  turnToHeading(225);
   straight(-10);
-  smartTurn(-22.5);
-  straight(-16);
+  turnToHeading(202.5);
+  slam(reverse);
   straight(6);
-  smartTurn(89);
+  turnToHeading(290);
   Intake.spin(forward);
   straight(41);
-  smartTurn(75);
+  turnToHeading(5);
   Intake.stop();
   straight(5);
-  smartTurn(90);
+  turnToHeading(90);
   Intake.spin(reverse);
-  straight(30);
-  /*
-  straight(-18);
-  smartTurn(-90);
+  slam(fwd);
+  Intake.stop();
+  straight(-16);
+  turnToHeading(0);
   Intake.spin(forward);
-  straight(8);
+  turnToHeading(90);
   Intake.stop();
-  straight(-8);
-  smartTurn(90);
-  straight(18);
+  Intake.spin(reverse);
+  slam(fwd);
   Intake.stop();
-*/
   //code for touching elevation
   /*
   smartTurn(135);
@@ -253,16 +268,18 @@ void oppositeSide(void) {
 void sameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
-  smartTurn(-45);
+  turnToHeading(315);
   straight(20);
-  smartTurn(45);
+  turnToHeading(0);
   Intake.spin(reverse);
-  straight(16);
+  slam(fwd);
   Intake.stop();
-  smartTurn(135);
-  straight(28);
-  smartTurn(-45);
-  straight(36);
+  turnToHeading(135);
+  straight(20);
+  turnToHeading(90);
+  Intake.spin(reverse);
+  straight(26);
+  Intake.stop();
 }
 void programmingSkills(void) {
   bringCataDown();
@@ -302,8 +319,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
-    int rightMotorSpeed = (intakeMode ? 1 : -1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
 
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
@@ -332,8 +349,8 @@ void usercontrol(void) {
         vex::task run(fullCataCycle);
 
     } else if(Controller1.ButtonA.pressing()) {
-        Catapult1.spin(directionType::fwd, 50, velocityUnits::pct);
-        Catapult2.spin(directionType::fwd, 50, velocityUnits::pct);
+        Catapult1.spin(directionType::fwd);
+        Catapult2.spin(directionType::fwd);
     }
 
     // OUTTAKE
@@ -365,6 +382,7 @@ void usercontrol(void) {
     TopRight.spin(forward);
     //test odom
     odomUpdate();
+    Controller1.Screen.clearLine();
     Controller1.Screen.print("odom: %.2f inertial %.2f", orientation, inertialSensor.rotation());
     wait(25, msec);
   }
