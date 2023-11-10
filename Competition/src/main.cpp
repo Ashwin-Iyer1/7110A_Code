@@ -236,29 +236,38 @@ void brakeAll() {
   TopRight.setStopping(brakeType::brake);
 }
 void oppositeSide(void) {
+  //start close to left of tile touching wall
   vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
+  // score alliance triball to near net         
+  straight(4);
   turnToHeading(39);
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
-  straight(-8);
-  toggleWings();
-  turnToHeading(225);
+  straight(-3);
+  // toggleWings(); looooowk do we even need?
+  turnToHeading(210);
   straight(-10);
   turnToHeading(202.5);
   toggleWings();
   slam(reverse);
-  straight(6);
-  turnToHeading(290);
+  // score triball not touching black bar
+  straight(3);
+  turnToHeading(270);
   Intake.spin(forward);
-  straight(41);
-  turnToHeading(5);
+  straight(25);
+  turnToHeading(0);
+  straight(25);
+  wait(200, msec);
   Intake.stop();
-  turnToHeading(90);
+  straight(-5);
+  turnToHeading(100);
   Intake.spin(reverse);
+  wait(500, msec);
   turnToHeading(270);
   slam(reverse);
   Intake.stop();
+  /*
   straight(16);
   turnToHeading(0);
   Intake.spin(forward);
@@ -268,6 +277,7 @@ void oppositeSide(void) {
   Intake.spin(reverse);
   slam(fwd);
   Intake.stop();
+  */
   //code for touching elevation
   /*
   smartTurn(135);
@@ -276,6 +286,7 @@ void oppositeSide(void) {
   toggleWings();
   straight(4);
   */
+  
 }
 void sameSide(void) {
   brakeAll();
@@ -331,22 +342,42 @@ void AWPSameSide(void) {
 }
 void programmingSkills(void) {
   bringCataDown();
-  straight(10);
+  turnToHeading(315);
+  Intake.spin(reverse);
+  straight(5);
+  Intake.stop();
+  straight(-5);
+  turnToHeading(135);
+  //-10 during prog skills run
+  straight(-18);
+  turnToHeading(180);
+  //slam was straight(8) during prog skills
+  slam(reverse);
+  //8 during prog skills
+  straight(11);
+  turnToHeading(250);
+  straight(2);
   toggleCata();
   wait(40,sec);
   stopCata();
   bringCataDown();
-  straight(-20);
+  straight(40);
+  turnToHeading(270);
+  slam(reverse);
 
-  smartTurn(-55);
-  straight(-108);
-  smartTurn(90);
-  straight(-84);
-  smartTurn(90);
-  toggleWings();
-  straight(-55);
-  smartTurn(-90);
-  straight(-18);
+  /*
+  turnToHeading(270);
+  straight(4);
+  turnToHeading(225);
+  straight(4);
+  toggleCata();
+  wait(40,sec);
+  stopCata();
+  bringCataDown();
+  straight(-4);
+  turnToHeading(300);
+  straight();
+  */
 }
   
 void usercontrol(void) {
@@ -444,9 +475,9 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(oppositeSide);
+  //Competition.autonomous(oppositeSide);
   //Competition.autonomous(sameSide);
-  //Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   Competition.drivercontrol(usercontrol);
 
   
