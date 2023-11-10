@@ -34,6 +34,7 @@ motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT5);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
+pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation rotationSensor = rotation(PORT1);
 
 bool catatoggle = false;
@@ -77,6 +78,9 @@ void toggleCata() {
 
 void toggleWings() {
   Wings.set(!Wings.value());
+}
+void toggleBlocker() {
+  Blocker.set(!Blocker.value());
 }
 
 float gearRatio = 36.0/84.0;
@@ -138,9 +142,9 @@ bool smartTurn(float rot) {
   return true;
 }
 bool turnToHeading(float heading) {
-  float clockwiseRotation = inertialSensor.heading()+360-heading;
-  float counterRotation = inertialSensor.heading()-heading;
-  return smartTurn((clockwiseRotation < (-1*counterRotation)) ? clockwiseRotation : counterRotation);
+  float clockwiseRotation = heading-inertialSensor.heading();
+  smartTurn((abs(clockwiseRotation) < abs(clockwiseRotation+360)) ? clockwiseRotation : clockwiseRotation+360);
+  return true;
 }
 void odomUpdate() {
   float leftPos = (TopLeft.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius;
@@ -172,18 +176,24 @@ void straight(float dist, float speed) {
   straight(dist,distanceUnits::in);
 }
 void straight(float dist) {
+
   straight(dist,50);
+}
+void backwards(float dist, float speed) {
+  straight(-dist, speed);
 }
 //gives robot brain trauma
 void slam(directionType direction) {
-  FrontLeft.spin(direction);
-  BackLeft.spin(direction);
-  TopLeft.spin(direction);
-  FrontRight.spin(direction);
-  BackRight.spin(direction);
-  TopRight.spin(direction);
-  wait(0.15,sec);
-  waitUntil(TopLeft.velocity(pct)<10);
+  FrontLeft.spin(direction, 100, pct);
+  BackLeft.spin(direction, 100, pct);
+  TopLeft.spin(direction, 100, pct);
+  FrontRight.spin(direction, 100, pct);
+  BackRight.spin(direction, 100, pct);
+  TopRight.spin(direction, 100, pct);
+  wait(0.5,sec);
+  while (!((abs(TopLeft.velocity(pct))<10) || (inertialSensor.acceleration(yaxis)))) {
+    wait(5, msec);
+  }
   FrontLeft.stop();
   BackLeft.stop();
   TopLeft.stop();
@@ -209,7 +219,7 @@ void pre_auton(void) {
   Catapult1.setStopping(brakeType::coast);
   Catapult2.setStopping(brakeType::coast);
   Catapult1.setVelocity(100,pct);
-  Intake.setVelocity(50,pct);
+  Intake.setVelocity(100,pct);
   FrontLeft.setVelocity(50, percent);
   BackLeft.setVelocity(50, percent);
   TopLeft.setVelocity(50, percent);
@@ -236,6 +246,7 @@ void oppositeSide(void) {
   turnToHeading(225);
   straight(-10);
   turnToHeading(202.5);
+  toggleWings();
   slam(reverse);
   straight(6);
   turnToHeading(290);
@@ -243,14 +254,15 @@ void oppositeSide(void) {
   straight(41);
   turnToHeading(5);
   Intake.stop();
-  straight(5);
   turnToHeading(90);
   Intake.spin(reverse);
-  slam(fwd);
+  turnToHeading(270);
+  slam(reverse);
   Intake.stop();
-  straight(-16);
+  straight(16);
   turnToHeading(0);
   Intake.spin(forward);
+  straight(5);
   turnToHeading(90);
   Intake.stop();
   Intake.spin(reverse);
@@ -269,14 +281,50 @@ void sameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
   turnToHeading(315);
-  straight(20);
+  straight(25);
   turnToHeading(0);
   Intake.spin(reverse);
-  slam(fwd);
+  wait(0.5,sec);
   Intake.stop();
+  straight(-6);
+  turnToHeading(180);
+  slam(reverse);
+  straight(6);
+  turnToHeading(90);
+  straight(26);
+  turnToHeading(0);
+  Intake.spin(fwd);
+  straight(19);
+  wait(1,sec);
+  turnToHeading(180);
+  Intake.stop();
+  straight(16);
+  turnToHeading(225);
+  straight(20);
   turnToHeading(135);
   straight(20);
   turnToHeading(90);
+  Intake.spin(reverse);
+  wait(1,sec);
+  Intake.stop();
+}
+void AWPSameSide(void) {
+  brakeAll();
+  vex::task run(bringCataDown);
+  turnToHeading(315);
+  straight(20);
+  turnToHeading(0);
+  Intake.spin(reverse);
+  wait(1,sec);
+  Intake.stop();
+  turnToHeading(180);
+  slam(reverse);
+  straight(10);
+  turnToHeading(0);
+  straight(-6);
+  turnToHeading(315);
+  straight(-15);
+  
   Intake.spin(reverse);
   straight(26);
   Intake.stop();
@@ -308,6 +356,7 @@ void usercontrol(void) {
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
+  Controller1.ButtonX.pressed(toggleBlocker);
   Controller1.ButtonLeft.pressed(cataMatchLoad);
   while (true) {
     //tank drive
