@@ -245,7 +245,7 @@ void oppositeSide(void) {
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
   straight(-3);
-  // toggleWings(); looooowk do we even need?
+  toggleWings();
   turnToHeading(210);
   straight(-10);
   turnToHeading(202.5);
@@ -258,15 +258,22 @@ void oppositeSide(void) {
   straight(25);
   turnToHeading(0);
   straight(25);
-  wait(200, msec);
-  Intake.stop();
   straight(-5);
-  turnToHeading(100);
+  turnToHeading(90);
   Intake.spin(reverse);
   wait(500, msec);
+  Intake.stop();
   turnToHeading(270);
   slam(reverse);
-  Intake.stop();
+  straight(15);
+  turnToHeading(250);
+  Intake.spin(forward);
+  straight(20);
+  straight(-15);
+  turnToHeading(90);
+  Intake.spinFor(reverse, 0.5, sec);
+  turnToHeading(270);
+  slam(reverse);
   /*
   straight(16);
   turnToHeading(0);
@@ -404,7 +411,6 @@ void usercontrol(void) {
 
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
-    
     if (abs(leftMotorSpeed) < deadband) {
       FrontLeft.setVelocity(0, percent);
       BackLeft.setVelocity(0, percent);
@@ -461,10 +467,9 @@ void usercontrol(void) {
     TopLeft.spin(forward);
     TopRight.spin(forward);
     //test odom
-    odomUpdate();
-    Controller1.Screen.clearLine();
-    Controller1.Screen.print("odom: %.2f inertial %.2f", orientation, inertialSensor.rotation());
-    wait(25, msec);
+    //odomUpdate();
+    //Controller1.Screen.clearLine();
+    //Controller1.Screen.print("odom: %.2f inertial %.2f", orientation, inertialSensor.rotation());
   }
 }
 
@@ -479,11 +484,19 @@ int main() {
   //Competition.autonomous(sameSide);
   Competition.autonomous(programmingSkills);
   Competition.drivercontrol(usercontrol);
-
-  
-
   // Prevent main from exiting with an infinite loop.
   while (true) {
+    /*
+    if(Controller1.ButtonLeft.pressing()) {
+      Competition.autonomous(oppositeSide);
+      Controller1.Screen.newLine();
+      Controller1.Screen.print("opposite side");
+    }
+    if(Controller1.ButtonRight.pressing()) {
+      Competition.autonomous(sameSide);
+      Controller1.Screen.newLine();
+      Controller1.Screen.print("same side");
+    }*/
     wait(100, msec);
   }
 }
