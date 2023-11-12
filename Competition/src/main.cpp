@@ -42,7 +42,6 @@ void stopCata() {
     Catapult1.stop();
     Catapult2.stop();
 }
-
 void bringCataDown(float angle) {
   while (rotationSensor.position(deg) > angle) {
         Catapult1.spin(fwd);
@@ -84,7 +83,7 @@ void toggleBlocker() {
 }
 
 float gearRatio = 36.0/84.0;
-float wheelDiameter = 3.25;
+float wheelDiameter = 4;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
 float drivetrainWidth = 14;
@@ -107,7 +106,7 @@ bool smartTurn(float rot) {
   float i = 0;
   float eRec = 0;
   float kp = 0.75;
-  float kd = 0;
+  float kd = 0.01;
   float ki = 0;
   float dt = 0.05;
   double currAngle = inertialSensor.rotation(deg);
@@ -240,36 +239,36 @@ void oppositeSide(void) {
   vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
   // score alliance triball to near net         
-  straight(4);
-  turnToHeading(39);
+  straight(5);
+  turnToHeading(48);
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
-  straight(-3);
-  toggleWings();
+  straight(-5.5); 
   turnToHeading(210);
-  straight(-10);
-  turnToHeading(202.5);
+  straight(-12);
   toggleWings();
+  turnToHeading(180);
   slam(reverse);
+  toggleWings();
   // score triball not touching black bar
   straight(3);
   turnToHeading(270);
   Intake.spin(forward);
-  straight(25);
+  straight(30);
   turnToHeading(0);
-  straight(25);
-  straight(-5);
+  straight(30);
+  straight(-6);
   turnToHeading(90);
   Intake.spin(reverse);
   wait(500, msec);
   Intake.stop();
   turnToHeading(270);
   slam(reverse);
-  straight(15);
+  straight(18);
   turnToHeading(250);
   Intake.spin(forward);
-  straight(20);
-  straight(-15);
+  straight(24);
+  straight(-18);
   turnToHeading(90);
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
@@ -298,29 +297,30 @@ void oppositeSide(void) {
 void sameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
+  straight(5);
   turnToHeading(315);
-  straight(25);
+  straight(30);
   turnToHeading(0);
   Intake.spin(reverse);
   wait(0.5,sec);
   Intake.stop();
-  straight(-6);
+  straight(-7.2);
   turnToHeading(180);
   slam(reverse);
-  straight(6);
+  straight(7.2);
   turnToHeading(90);
-  straight(26);
+  straight(32);
   turnToHeading(0);
   Intake.spin(fwd);
-  straight(19);
+  straight(24);
   wait(1,sec);
   turnToHeading(180);
   Intake.stop();
-  straight(16);
+  straight(20);
   turnToHeading(225);
-  straight(20);
+  straight(24);
   turnToHeading(135);
-  straight(20);
+  straight(24);
   turnToHeading(90);
   Intake.spin(reverse);
   wait(1,sec);
@@ -330,25 +330,28 @@ void AWPSameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
   turnToHeading(315);
-  straight(20);
+  straight(24);
   turnToHeading(0);
   Intake.spin(reverse);
   wait(1,sec);
   Intake.stop();
   turnToHeading(180);
   slam(reverse);
-  straight(10);
-  turnToHeading(0);
-  straight(-6);
-  turnToHeading(315);
-  straight(-15);
-  
-  Intake.spin(reverse);
-  straight(26);
-  Intake.stop();
+  turnToHeading(180);
+  straight(18);
+  turnToHeading(135);
+  straight(12);
+  toggleWings();
+  straight(-12);
+  turnToHeading(240);
+  straight(-14.4);
+  turnToHeading(270);
+  straight(-35);
 }
 void programmingSkills(void) {
   bringCataDown();
+  straight(2.4);
+  /*
   turnToHeading(315);
   Intake.spin(reverse);
   straight(5);
@@ -356,20 +359,25 @@ void programmingSkills(void) {
   straight(-5);
   turnToHeading(135);
   //-10 during prog skills run
-  straight(-18);
+  straight(-15);
   turnToHeading(180);
   //slam was straight(8) during prog skills
   slam(reverse);
   //8 during prog skills
   straight(11);
   turnToHeading(250);
-  straight(2);
+  straight(3);
+  */
   toggleCata();
-  wait(40,sec);
+  wait(45,sec);
   stopCata();
   bringCataDown();
-  straight(40);
+  turnToHeading(10);
+  straight(60);
+  turnToHeading(90);
+  straight(36);
   turnToHeading(270);
+  toggleWings();
   slam(reverse);
 
   /*
@@ -386,7 +394,9 @@ void programmingSkills(void) {
   straight();
   */
 }
-  
+void testing(void) {
+  straight(-8.5);
+}
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
   int deadband = 5;
@@ -482,7 +492,9 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(oppositeSide);
   //Competition.autonomous(sameSide);
-  Competition.autonomous(programmingSkills);
+  // Competition.autonomous(programmingSkills);
+  //Competition.autonomous(AWPSameSide);
+  Competition.autonomous(testing);
   Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
