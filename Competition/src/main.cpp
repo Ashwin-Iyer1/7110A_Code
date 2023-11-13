@@ -243,18 +243,21 @@ void oppositeSide(void) {
   turnToHeading(48);
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
-  straight(-5.5); 
-  turnToHeading(210);
-  straight(-12);
+  straight(-7); 
+  turnToHeading(225);
   toggleWings();
+  straight(-12);
+  turnToHeading(170);
+  toggleWings();
+  turnToHeading(225);
+  straight(4);
   turnToHeading(180);
   slam(reverse);
-  toggleWings();
   // score triball not touching black bar
   straight(3);
   turnToHeading(270);
   Intake.spin(forward);
-  straight(30);
+  straight(32);
   turnToHeading(0);
   straight(30);
   straight(-6);
@@ -265,10 +268,10 @@ void oppositeSide(void) {
   turnToHeading(270);
   slam(reverse);
   straight(18);
-  turnToHeading(250);
+  turnToHeading(235);
   Intake.spin(forward);
-  straight(24);
-  straight(-18);
+  straight(12);
+  straight(-8);
   turnToHeading(90);
   Intake.spinFor(reverse, 0.5, sec);
   turnToHeading(270);
@@ -298,7 +301,7 @@ void sameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
   straight(5);
-  turnToHeading(315);
+  smartTurn(-45);
   straight(30);
   turnToHeading(0);
   Intake.spin(reverse);
@@ -306,47 +309,57 @@ void sameSide(void) {
   Intake.stop();
   straight(-7.2);
   turnToHeading(180);
-  slam(reverse);
-  straight(7.2);
-  turnToHeading(90);
-  straight(32);
-  turnToHeading(0);
-  Intake.spin(fwd);
-  straight(24);
-  wait(1,sec);
-  turnToHeading(180);
-  Intake.stop();
-  straight(20);
-  turnToHeading(225);
-  straight(24);
-  turnToHeading(135);
-  straight(24);
-  turnToHeading(90);
-  Intake.spin(reverse);
-  wait(1,sec);
-  Intake.stop();
+  straight(-12.5);
+  straight(12.5);
+  turnToHeading(250);
+  straight(2);
+  // straight(7.2);
+  // turnToHeading(90);
+  // straight(32);
+  // turnToHeading(0);
+  // Intake.spin(fwd);
+  // straight(24);
+  // wait(1,sec);
+  // turnToHeading(180);
+  // Intake.stop();
+  // straight(20);
+  // turnToHeading(225);
+  // straight(24);
+  // turnToHeading(135);
+  // straight(24);
+  // turnToHeading(90);
+  // Intake.spin(reverse);
+  // wait(1,sec);
+  // Intake.stop();
 }
 void AWPSameSide(void) {
   brakeAll();
   vex::task run(bringCataDown);
-  turnToHeading(315);
+  straight(2);
+  smartTurn(-45);
   straight(24);
-  turnToHeading(0);
+  turnToHeading(340);
   Intake.spin(reverse);
   wait(1,sec);
   Intake.stop();
+  straight(-2);
   turnToHeading(180);
   slam(reverse);
   turnToHeading(180);
-  straight(18);
-  turnToHeading(135);
+  straight(14);
+  turnToHeading(150);
   straight(12);
+  turnToHeading(120);
   toggleWings();
-  straight(-12);
+  straight(-10);
   turnToHeading(240);
-  straight(-14.4);
+  straight(-21);
   turnToHeading(270);
-  straight(-35);
+  slam(reverse);
+  smartTurn(-10);
+  slam(reverse);
+  smartTurn(-20);
+  brakeAll();
 }
 void programmingSkills(void) {
   bringCataDown();
@@ -490,11 +503,11 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  //Competition.autonomous(oppositeSide);
-  //Competition.autonomous(sameSide);
+  // Competition.autonomous(oppositeSide);
+  Competition.autonomous(sameSide);
   // Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
-  Competition.autonomous(testing);
+  //Competition.autonomous(testing);
   Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
