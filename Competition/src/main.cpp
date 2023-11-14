@@ -37,6 +37,8 @@ pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation rotationSensor = rotation(PORT1);
 
+motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
+motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
 bool catatoggle = false;
 void stopCata() {
     Catapult1.stop();
@@ -73,8 +75,6 @@ void toggleCata() {
         Catapult2.spin(directionType::fwd);
     }
 }
-
-
 void toggleWings() {
   Wings.set(!Wings.value());
 }
@@ -92,13 +92,14 @@ float prevRightRotation = 0;
 float orientation = 0;
 double driveRotationConstant = 0.8721445746*1.054572148;
 
+float distToRot(float dist) {
+  return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
+}
 //Currently inaccurate, will require tuning of driveRotationConstant
 void simpleTurn(float deg) {
   float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
-  FrontLeft.spinFor(fwd, dist, vex::deg, false);
-  BackLeft.spinFor(fwd, dist, vex::deg, false);
-  FrontRight.spinFor(reverse, dist, vex::deg, false);
-  BackRight.spinFor(reverse, dist, vex::deg, true);
+  leftGroup.spinFor(fwd, dist, vex::deg, false);
+  rightGroup.spinFor(reverse, dist, vex::deg, false);
 }
 bool smartTurn(float rot) {
   float e = 0;
@@ -118,26 +119,14 @@ bool smartTurn(float rot) {
     i += e*dt;
     eRec = e;
     float speed = kp*e + kd*d + ki*i;
-    FrontLeft.setVelocity(speed,pct);
-    BackLeft.setVelocity(speed,pct);
-    TopLeft.setVelocity(speed, pct);
-    FrontRight.setVelocity(-speed,pct);
-    BackRight.setVelocity(-speed,pct);
-    TopRight.setVelocity(-speed,pct);
-    FrontLeft.spin(fwd);
-    BackLeft.spin(fwd);
-    TopLeft.spin(fwd);
-    FrontRight.spin(fwd);
-    BackRight.spin(fwd);
-    TopRight.spin(fwd);
+    leftGroup.setVelocity(speed,pct);
+    rightGroup.setVelocity(-speed,pct);
+    leftGroup.spin(fwd);
+    rightGroup.spin(fwd);
     wait(dt,sec);
   }
-  FrontLeft.stop();
-  BackLeft.stop();
-  TopLeft.stop();
-  FrontRight.stop();
-  BackRight.stop();
-  TopRight.stop();
+  leftGroup.stop();
+  rightGroup.stop();
   return true;
 }
 bool turnToHeading(float heading) {
@@ -157,25 +146,16 @@ void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::cm) {
     dist*=0.393701;
   }
-  float rotation = (dist/(wheelDiameter * M_PI)*360) / gearRatio;
-  FrontLeft.spinFor(rotation, deg, false);
-  BackLeft.spinFor(rotation,deg, false);
-  TopLeft.spinFor(rotation, deg, false);
-  FrontRight.spinFor(rotation,deg, false);
-  BackRight.spinFor(rotation,deg, false);
-  TopRight.spinFor(rotation, deg, true);
+  float rotation = distToRot(dist);
+  leftGroup.spinFor(rotation, deg, false);
+  rightGroup.spinFor(rotation,deg, false);
 }
 void straight(float dist, float speed) {
-  FrontLeft.setVelocity(speed,pct);
-  FrontRight.setVelocity(speed,pct);
-  BackLeft.setVelocity(speed,pct);
-  BackRight.setVelocity(speed,pct);
-  TopLeft.setVelocity(speed,pct);
-  TopRight.setVelocity(speed,pct);
+  leftGroup.setVelocity(speed,pct);
+  rightGroup.setVelocity(speed,pct);
   straight(dist,distanceUnits::in);
 }
 void straight(float dist) {
-
   straight(dist,50);
 }
 void backwards(float dist, float speed) {
@@ -183,22 +163,40 @@ void backwards(float dist, float speed) {
 }
 //gives robot brain trauma
 void slam(directionType direction) {
-  FrontLeft.spin(direction, 100, pct);
-  BackLeft.spin(direction, 100, pct);
-  TopLeft.spin(direction, 100, pct);
-  FrontRight.spin(direction, 100, pct);
-  BackRight.spin(direction, 100, pct);
-  TopRight.spin(direction, 100, pct);
+  leftGroup.spin(direction, 100, pct);
+  rightGroup.spin(direction, 100, pct);
   wait(0.5,sec);
   while (!((abs(TopLeft.velocity(pct))<10) || (inertialSensor.acceleration(yaxis)))) {
     wait(5, msec);
   }
-  FrontLeft.stop();
-  BackLeft.stop();
-  TopLeft.stop();
-  FrontRight.stop();
-  BackRight.stop();
-  TopRight.stop();
+  leftGroup.stop();
+  rightGroup.stop();
+}
+void arc(float radius, float angle, turnType side) {
+  float radAngle = angle/180*M_PI;
+  float leftArc;
+  float rightArc;
+  if(side==right) {
+    if(angle>0) {
+      leftArc = (radius+drivetrainWidth/2)*radAngle;
+      rightArc = (radius-drivetrainWidth/2)*radAngle;
+    } else {
+      leftArc = (radius-drivetrainWidth/2)*radAngle;
+      rightArc = (radius+drivetrainWidth/2)*radAngle;
+    }
+  } else {
+    if(angle>0) {
+      leftArc = -1*(radius+drivetrainWidth/2)*radAngle;
+      rightArc = -1*(radius-drivetrainWidth/2)*radAngle;
+    } else {
+      leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
+      rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
+    }
+  }
+  leftGroup.setVelocity(leftArc/rightArc*30,pct);
+  rightGroup.setVelocity(rightArc/leftArc*30,pct);
+  leftGroup.spinFor(distToRot(leftArc), deg);
+  rightGroup.spinFor(distToRot(rightArc), deg);
 }
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
@@ -219,20 +217,12 @@ void pre_auton(void) {
   Catapult2.setStopping(brakeType::coast);
   Catapult1.setVelocity(100,pct);
   Intake.setVelocity(100,pct);
-  FrontLeft.setVelocity(50, percent);
-  BackLeft.setVelocity(50, percent);
-  TopLeft.setVelocity(50, percent);
-  FrontRight.setVelocity(50, percent);
-  BackRight.setVelocity(50, percent);
-  TopRight.setVelocity(50, percent);
+  leftGroup.setVelocity(50, percent);
+  rightGroup.setVelocity(50, percent);
 }
 void brakeAll() {
-  FrontLeft.setStopping(brakeType::brake);
-  FrontRight.setStopping(brakeType::brake);
-  BackLeft.setStopping(brakeType::brake);
-  BackRight.setStopping(brakeType::brake);
-  TopLeft.setStopping(brakeType::brake);
-  TopRight.setStopping(brakeType::brake);
+  leftGroup.setStopping(brakeType::brake);
+  rightGroup.setStopping(brakeType::brake);
 }
 void oppositeSide(void) {
   //start close to left of tile touching wall
@@ -435,13 +425,9 @@ void usercontrol(void) {
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
     if (abs(leftMotorSpeed) < deadband) {
-      FrontLeft.setVelocity(0, percent);
-      BackLeft.setVelocity(0, percent);
-      TopLeft.setVelocity(0, percent);
+      leftGroup.setVelocity(0, percent);
     } else {
-      FrontLeft.setVelocity(leftMotorSpeed, percent);
-      BackLeft.setVelocity(leftMotorSpeed, percent);
-      TopLeft.setVelocity(leftMotorSpeed, percent);
+      leftGroup.setVelocity(leftMotorSpeed, percent);
     }
 
     // Drivetrain inversion
@@ -474,21 +460,13 @@ void usercontrol(void) {
     // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
     if (abs(rightMotorSpeed) < deadband) {
-      FrontRight.setVelocity(0, percent);
-      BackRight.setVelocity(0, percent);
-      TopRight.setVelocity(0, percent);
+      rightGroup.setVelocity(0, percent);
     } else {
-      FrontRight.setVelocity(rightMotorSpeed, percent);
-      BackRight.setVelocity(rightMotorSpeed, percent);
-      TopRight.setVelocity(rightMotorSpeed, percent);
+      rightGroup.setVelocity(rightMotorSpeed, percent);
     }
     // Spin all drivetrain motors in the forward direction.
-    FrontLeft.spin(forward);
-    FrontRight.spin(forward);
-    BackLeft.spin(forward);
-    BackRight.spin(forward);
-    TopLeft.spin(forward);
-    TopRight.spin(forward);
+    leftGroup.spin(forward);
+    rightGroup.spin(forward);
     //test odom
     //odomUpdate();
     //Controller1.Screen.clearLine();
