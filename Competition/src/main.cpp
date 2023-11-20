@@ -149,7 +149,7 @@ bool turnToHeading(float heading) {
     closestPath = clockwiseRotation;
     if(fabs(clockwiseRotation-360) < (closestPath)) closestPath-=360;
   } else {
-    closestPath = clockwiseRotation+360
+    closestPath = clockwiseRotation+360;
   }
   smartTurn(closestPath);
   return true;
