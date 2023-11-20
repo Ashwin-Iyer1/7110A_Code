@@ -39,10 +39,16 @@ rotation rotationSensor = rotation(PORT1);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
+motor_group Catapult = motor_group(Catapult1, Catapult2);
+vex::task cata;
 bool catatoggle = false;
 void stopCata() {
-    Catapult1.stop();
-    Catapult2.stop();
+    Catapult.stop();
+}
+void cataSpin() {
+  float bandStrength = (rotationSensor.angle(deg)<220 && rotationSensor.angle(deg)>140) ? 220-rotationSensor.angle(deg) : 0;
+  float cataVoltage = fmin(10.9, 2 + bandStrength/7);
+  Catapult.spin(fwd,cataVoltage, volt);
 }
 void bringCataDown(float angle) {
   while (rotationSensor.position(deg) > angle) {
@@ -65,15 +71,22 @@ int fullCataCycle() {
   stopCata();
   return 1;
 }
+int toggleCataTask() {
+  while(true) {
+    cataSpin();
+    wait(100, msec);
+  }
+  return 1;
+}
 void toggleCata() {
-    if(abs(Catapult1.velocity(rpm) )>0) {
-        bringCataDown();
-        Catapult1.stop();
-        Catapult2.stop();
-    } else {
-        Catapult1.spin(directionType::fwd);
-        Catapult2.spin(directionType::fwd);
-    }
+  if(!catatoggle) {
+    cata.resume();
+    catatoggle = true;
+  } else {
+    cata.suspend();
+    stopCata();
+    catatoggle = false;
+  }
 }
 void toggleWings() {
   Wings.set(!Wings.value());
@@ -113,7 +126,7 @@ bool smartTurn(float rot) {
   double currAngle = inertialSensor.rotation(deg);
   double wantedAngle = currAngle + rot;
   e = wantedAngle-inertialSensor.rotation(deg);
-  while( abs(e) + abs(d) > 2) {
+  while( fabs(e) + fabs(d) > 2) {
     e = wantedAngle-inertialSensor.rotation(deg);
     d = (e-eRec)/dt;
     i += e*dt;
@@ -131,7 +144,14 @@ bool smartTurn(float rot) {
 }
 bool turnToHeading(float heading) {
   float clockwiseRotation = heading-inertialSensor.heading();
-  smartTurn((abs(clockwiseRotation) < abs(clockwiseRotation+360)) ? clockwiseRotation : clockwiseRotation+360);
+  float closestPath = 0;
+  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
+    closestPath = clockwiseRotation;
+    if(fabs(clockwiseRotation-360) < (closestPath)) closestPath-=360;
+  } else {
+    closestPath = clockwiseRotation+360
+  }
+  smartTurn(closestPath);
   return true;
 }
 void odomUpdate() {
@@ -166,7 +186,7 @@ void slam(directionType direction) {
   leftGroup.spin(direction, 100, pct);
   rightGroup.spin(direction, 100, pct);
   wait(0.5,sec);
-  while (!((abs(TopLeft.velocity(pct))<10) || (inertialSensor.acceleration(yaxis)))) {
+  while (!((fabs(TopLeft.velocity(pct))<10) || (inertialSensor.acceleration(yaxis)))) {
     wait(5, msec);
   }
   leftGroup.stop();
@@ -206,8 +226,9 @@ int shake() {
   }
   return 1;
 }
-
 void pre_auton(void) {
+  cata = vex::task(toggleCataTask);
+  cata.suspend();
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -373,7 +394,7 @@ void programmingSkills(void) {
   */
   toggleCata();
   wait(45,sec);
-  stopCata();
+  toggleCata();
   bringCataDown();
   turnToHeading(10);
   straight(60);
@@ -424,7 +445,7 @@ void usercontrol(void) {
 
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
-    if (abs(leftMotorSpeed) < deadband) {
+    if (fabs(leftMotorSpeed) < deadband) {
       leftGroup.setVelocity(0, percent);
     } else {
       leftGroup.setVelocity(leftMotorSpeed, percent);
@@ -459,7 +480,7 @@ void usercontrol(void) {
 
     // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
-    if (abs(rightMotorSpeed) < deadband) {
+    if (fabs(rightMotorSpeed) < deadband) {
       rightGroup.setVelocity(0, percent);
     } else {
       rightGroup.setVelocity(rightMotorSpeed, percent);
