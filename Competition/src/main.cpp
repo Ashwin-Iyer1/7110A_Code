@@ -99,7 +99,7 @@ float gearRatio = 36.0/84.0;
 float wheelDiameter = 4;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
-float drivetrainWidth = 14;
+float drivetrainWidth = 12.5;
 float prevLeftRotation = 0;
 float prevRightRotation = 0;
 float orientation = 0;
@@ -213,10 +213,10 @@ void arc(float radius, float angle, turnType side) {
       rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
     }
   }
-  leftGroup.setVelocity(leftArc/rightArc*30,pct);
-  rightGroup.setVelocity(rightArc/leftArc*30,pct);
-  leftGroup.spinFor(distToRot(leftArc), deg);
-  rightGroup.spinFor(distToRot(rightArc), deg);
+  leftGroup.setVelocity(sqrtf(leftArc/rightArc)*30,pct);
+  rightGroup.setVelocity(sqrtf(rightArc/leftArc)*30,pct);
+  leftGroup.spinFor(distToRot(leftArc), deg, false);
+  rightGroup.spinFor(distToRot(rightArc), deg, true);
 }
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
