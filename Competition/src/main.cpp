@@ -13,6 +13,7 @@
 #include "stdarg.h"
 #include <cstring>
 #include <string.h>
+#include "vex_motor.h"
 
 using namespace vex;
 
@@ -39,7 +40,14 @@ rotation rotationSensor = rotation(PORT1);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
-bool catatoggle = false;
+
+bool cataSpinning = false;
+int cataSpin() {
+  float bandStrength = (rotationSensor.angle(deg)<220 && rotationSensor.angle(deg)>130) ? 220-rotationSensor.angle(deg) : 0;
+  float voltage = 1 + bandStrength/7;
+  if (voltage>=11) voltage=10.9;
+  Catapult1.spin(fwd, voltage, volt);
+}
 void stopCata() {
     Catapult1.stop();
     Catapult2.stop();
@@ -66,13 +74,17 @@ int fullCataCycle() {
   return 1;
 }
 void toggleCata() {
-    if(abs(Catapult1.velocity(rpm) )>0) {
+  cataSpinning = !cataSpinning;
+    while(cataSpinning==true) {
+        vex::task run(cataSpin);
+        wait(50,msec);
+    }
+    if(!cataSpinning) {
         bringCataDown();
         Catapult1.stop();
         Catapult2.stop();
     } else {
-        Catapult1.spin(directionType::fwd);
-        Catapult2.spin(directionType::fwd);
+      
     }
 }
 void toggleWings() {
@@ -177,21 +189,11 @@ void arc(float radius, float angle, turnType side) {
   float leftArc;
   float rightArc;
   if(side==right) {
-    if(angle>0) {
-      leftArc = (radius+drivetrainWidth/2)*radAngle;
-      rightArc = (radius-drivetrainWidth/2)*radAngle;
-    } else {
-      leftArc = (radius-drivetrainWidth/2)*radAngle;
-      rightArc = (radius+drivetrainWidth/2)*radAngle;
-    }
+    leftArc = (radius+drivetrainWidth/2)*radAngle;
+    rightArc = (radius-drivetrainWidth/2)*radAngle;
   } else {
-    if(angle>0) {
-      leftArc = -1*(radius+drivetrainWidth/2)*radAngle;
-      rightArc = -1*(radius-drivetrainWidth/2)*radAngle;
-    } else {
-      leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
-      rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
-    }
+    leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
+    rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
   }
   leftGroup.setVelocity(leftArc/rightArc*30,pct);
   rightGroup.setVelocity(rightArc/leftArc*30,pct);
