@@ -243,7 +243,7 @@ void oppositeSide(void) {
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
-  straight(1.5);
+  straight(1.5,75);
   wait(0.25,sec);
   straight(-24);
   Intake.stop();
@@ -254,15 +254,15 @@ void oppositeSide(void) {
   slam(reverse);
   turnToHeading(180);
   arc(12,180,right);
-  straight(6);
+  straight(14);
   Intake.spin(reverse);
-  straight(-6);
+  straight(-10);
   Intake.stop();
-  turnToHeading(275);
+  turnToHeading(280);
   Intake.spin(fwd);
-  straight(25);
+  straight(24);
   Intake.stop();
-  turnToHeading(80);
+  turnToHeading(65);
   slam(fwd);
   /*
   straight(16);
@@ -286,21 +286,20 @@ void oppositeSide(void) {
   
 }
 void sameSide(void) {
-  brakeAll();
   vex::task run(bringCataDown);
-  straight(5);
-  smartTurn(-45);
-  straight(30);
+  Intake.setVelocity(100,pct);
+  // score alliance triball to near net    
+  inertialSensor.setHeading(180,deg); 
+  arc(110, -26, left);
+  toggleWings();
+  turnToHeading(270);
+  straight(-22);
+  toggleWings();
+  arc(180, 12, left);
+  straight(48);
   turnToHeading(0);
-  Intake.spin(reverse);
-  wait(0.5,sec);
-  Intake.stop();
-  straight(-7.2);
-  turnToHeading(180);
-  straight(-12.5);
-  straight(12.5);
-  turnToHeading(250);
-  straight(2);
+  arc(24, -90, right);
+  straight(24);
   // straight(7.2);
   // turnToHeading(90);
   // straight(32);
