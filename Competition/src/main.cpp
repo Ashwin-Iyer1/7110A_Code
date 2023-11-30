@@ -47,27 +47,28 @@ void stopCata() {
     Catapult.stop();
 }
 void cataSpin() {
-  float bandStrength = (rotationSensor.angle(deg)<220 && rotationSensor.angle(deg)>140) ? 220-rotationSensor.angle(deg) : 0;
-  float cataVoltage = fmin(10.9, 2 + bandStrength/7);
-  Catapult.spin(fwd,cataVoltage, volt);
+  //float bandStrength = (rotationSensor.angle(deg)<100 && rotationSensor.angle(deg)>18) ? rotationSensor.angle(deg)-20 : 0;
+  //float cataVoltage = fmin(10.9, 2 + bandStrength/7);
+  //float cataVoltage = 10.9;
+  //Catapult.spin(fwd,cataVoltage, volt);
+  Catapult.spin(fwd, 100, pct);
 }
 void bringCataDown(float angle) {
-  while (rotationSensor.position(deg) > angle) {
-        Catapult1.spin(fwd);
-        Catapult2.spin(fwd);
+  while (rotationSensor.position(deg) < angle) {
+        Catapult.spin(fwd);
         wait(20, msec);
       }
       stopCata();
 }
 int bringCataDown() {
-  bringCataDown(148);
+  bringCataDown(85);
   return 1;
 }
 void cataMatchLoad() {
   bringCataDown(160);
 }
 int fullCataCycle() {
-  Catapult1.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+  Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
   bringCataDown();
   stopCata();
   return 1;
@@ -169,7 +170,7 @@ void straight(float dist, distanceUnits units) {
   }
   float rotation = distToRot(dist);
   leftGroup.spinFor(rotation, deg, false);
-  rightGroup.spinFor(rotation,deg, false);
+  rightGroup.spinFor(rotation,deg, true);
 }
 void straight(float dist, float speed) {
   leftGroup.setVelocity(speed,pct);
@@ -204,8 +205,8 @@ void arc(float radius, float angle, turnType side) {
     leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
     rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
   }
-  leftGroup.setVelocity(sqrtf(leftArc/rightArc)*30,pct);
-  rightGroup.setVelocity(sqrtf(rightArc/leftArc)*30,pct);
+  leftGroup.setVelocity(sqrtf(fabs(leftArc/rightArc))*30,pct);
+  rightGroup.setVelocity(sqrtf(fabs(rightArc/leftArc))*30,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, true);
 }
@@ -225,9 +226,8 @@ void pre_auton(void) {
     wait(100, msec);
   } 
   inertialSensor.resetHeading();
-  Catapult1.setStopping(brakeType::coast);
-  Catapult2.setStopping(brakeType::coast);
-  Catapult1.setVelocity(100,pct);
+  Catapult.setStopping(brakeType::coast);
+  Catapult.setVelocity(100,pct);
   Intake.setVelocity(100,pct);
   leftGroup.setVelocity(50, percent);
   rightGroup.setVelocity(50, percent);
@@ -240,44 +240,30 @@ void oppositeSide(void) {
   //start close to left of tile touching wall
   vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
-  // score alliance triball to near net         
-  straight(5);
-  turnToHeading(48);
-  Intake.spinFor(reverse, 0.5, sec);
-  turnToHeading(270);
-  straight(-7); 
-  turnToHeading(225);
-  toggleWings();
-  straight(-12);
-  turnToHeading(170);
-  toggleWings();
-  turnToHeading(225);
-  straight(4);
-  turnToHeading(180);
-  slam(reverse);
-  // score triball not touching black bar
-  straight(3);
-  turnToHeading(270);
-  Intake.spin(forward);
-  straight(32);
-  turnToHeading(0);
-  straight(30);
-  straight(-6);
-  turnToHeading(90);
-  Intake.spin(reverse);
-  wait(500, msec);
+  // score alliance triball to near net    
+  inertialSensor.setHeading(270,deg); 
+  Intake.spin(fwd);   
+  straight(1.5);
+  wait(0.25,sec);
+  straight(-24);
   Intake.stop();
-  turnToHeading(270);
+  toggleWings();
+  arc(16.5,-90,right);
+  toggleWings();
+  turnToHeading(205);
   slam(reverse);
-  straight(18);
-  turnToHeading(235);
-  Intake.spin(forward);
-  straight(12);
-  straight(-8);
-  turnToHeading(90);
-  Intake.spinFor(reverse, 0.5, sec);
-  turnToHeading(270);
-  slam(reverse);
+  turnToHeading(180);
+  arc(12,180,right);
+  straight(6);
+  Intake.spin(reverse);
+  straight(-6);
+  Intake.stop();
+  turnToHeading(275);
+  Intake.spin(fwd);
+  straight(25);
+  Intake.stop();
+  turnToHeading(80);
+  slam(fwd);
   /*
   straight(16);
   turnToHeading(0);
@@ -410,7 +396,7 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  straight(-8.5);
+  arc(0,90,right);
 }
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
@@ -493,8 +479,8 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  // Competition.autonomous(oppositeSide);
-  Competition.autonomous(sameSide);
+  Competition.autonomous(oppositeSide);
+  //Competition.autonomous(sameSide);
   // Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
