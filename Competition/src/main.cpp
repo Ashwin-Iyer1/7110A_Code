@@ -128,7 +128,7 @@ bool smartTurn(float rot) {
   double currAngle = inertialSensor.rotation(deg);
   double wantedAngle = currAngle + rot;
   e = wantedAngle-inertialSensor.rotation(deg);
-  while( fabs(e) + fabs(d) > 2) {
+  while (fabs(e) + fabs(d) > 2) {
     e = wantedAngle-inertialSensor.rotation(deg);
     d = (e-eRec)/dt;
     i += e*dt;
@@ -198,6 +198,8 @@ void arc(float radius, float angle, turnType side) {
   float radAngle = angle/180*M_PI;
   float leftArc;
   float rightArc;
+  float leftspeed;
+  float rightspeed;
   if(side==right) {
     leftArc = (radius+drivetrainWidth/2)*radAngle;
     rightArc = (radius-drivetrainWidth/2)*radAngle;
@@ -205,8 +207,19 @@ void arc(float radius, float angle, turnType side) {
     leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
     rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
   }
-  leftGroup.setVelocity(sqrtf(fabs(leftArc/rightArc))*30,pct);
-  rightGroup.setVelocity(sqrtf(fabs(rightArc/leftArc))*30,pct);
+  leftspeed = sqrtf(fabs(leftArc/rightArc));
+  rightspeed = sqrtf(fabs(rightArc/leftArc));
+  if(leftspeed >rightspeed)
+    {
+      rightspeed = rightspeed/leftspeed;
+      leftspeed=1;
+  }else{
+    leftspeed = leftspeed/rightspeed;
+    rightspeed=1;
+  }
+  
+  leftGroup.setVelocity(leftspeed * 100,pct);
+  rightGroup.setVelocity(rightspeed * 100,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, true);
 }
@@ -245,7 +258,7 @@ void oppositeSide(void) {
   Intake.spin(fwd);   
   straight(1.5,75);
   wait(0.25,sec);
-  straight(-24);
+  straight(-24,100);
   Intake.stop();
   toggleWings();
   arc(16.5,-90,right);
