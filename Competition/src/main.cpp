@@ -415,6 +415,15 @@ void programmingSkills(void) {
 void testing(void) {
   arc(0,90,right);
 }
+void selectAuton() {
+  Controller1.Screen.print("Press X for opposite side, Y for same side, A for skills");
+  for(int t=0; t<5000; t+=50) {
+    if(Controller1.ButtonX.pressing()) Competition.autonomous(oppositeSide);
+    if(Controller1.ButtonY.pressing()) Competition.autonomous(sameSide);
+    if(Controller1.ButtonA.pressing()) Competition.autonomous(programmingSkills);
+    wait(50,msec);
+  }
+}
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
   int deadband = 5;
@@ -498,9 +507,10 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(oppositeSide);
   Competition.autonomous(sameSide);
-  // Competition.autonomous(programmingSkills);
+  //Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
+  if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
