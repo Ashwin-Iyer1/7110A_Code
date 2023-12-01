@@ -218,8 +218,8 @@ void arc(float radius, float angle, turnType side) {
     rightspeed=1;
   }
   
-  leftGroup.setVelocity(leftspeed * 100,pct);
-  rightGroup.setVelocity(rightspeed * 100,pct);
+  leftGroup.setVelocity(leftspeed * 75,pct);
+  rightGroup.setVelocity(rightspeed * 75,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, true);
 }
@@ -303,16 +303,21 @@ void sameSide(void) {
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(180,deg); 
-  arc(110, -26, left);
+  arc(110, 26, left);
   toggleWings();
   turnToHeading(270);
-  straight(-22);
+  straight(-18);
   toggleWings();
-  arc(180, 12, left);
-  straight(48);
+  arc(12, -180, left);
+  straight(-36);
   turnToHeading(0);
-  arc(24, -90, right);
-  straight(24);
+  toggleWings();
+  straight(4);
+  arc(18, -90, right);
+  toggleWings();
+  straight(-32);
+  toggleWings();
+  straight(-1);
   // straight(7.2);
   // turnToHeading(90);
   // straight(32);
@@ -491,8 +496,8 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(oppositeSide);
-  //Competition.autonomous(sameSide);
+  //Competition.autonomous(oppositeSide);
+  Competition.autonomous(sameSide);
   // Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
