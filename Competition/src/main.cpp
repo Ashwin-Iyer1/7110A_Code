@@ -121,8 +121,8 @@ bool smartTurn(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.75;
-  float kd = 0.01;
+  float kp = 0.775;
+  float kd = 0.00825;
   float ki = 0;
   float dt = 0.05;
   double currAngle = inertialSensor.rotation(deg);
@@ -178,7 +178,7 @@ void straight(float dist, float speed) {
   straight(dist,distanceUnits::in);
 }
 void straight(float dist) {
-  straight(dist,50);
+  straight(dist,100);
 }
 void backwards(float dist, float speed) {
   straight(-dist, speed);
@@ -188,7 +188,7 @@ void slam(directionType direction) {
   leftGroup.spin(direction, 100, pct);
   rightGroup.spin(direction, 100, pct);
   wait(0.5,sec);
-  while (!((fabs(TopLeft.velocity(pct))<10) || (inertialSensor.acceleration(yaxis)))) {
+  while (!((fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10))) {
     wait(5, msec);
   }
   leftGroup.stop();
@@ -303,21 +303,26 @@ void sameSide(void) {
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(180,deg); 
-  arc(110, 26, left);
+  arc(110, 24, left);
   toggleWings();
+  Intake.spin(reverse);
   turnToHeading(270);
-  straight(-18);
+  straight(-16);
+  Intake.stop();
+  arc(0,180,right);
+  turnToHeading(90);
+  slam(reverse);
   toggleWings();
-  arc(12, -180, left);
-  straight(-36);
+  arc(15, 180, right);
+  straight(24);
   turnToHeading(0);
   toggleWings();
-  straight(4);
-  arc(18, -90, right);
+  straight(2);
+  arc(16.5, -90, right);
   toggleWings();
-  straight(-32);
-  toggleWings();
-  straight(-1);
+  turnToHeading(270);
+  Blocker.set(true);
+  straight(-37);
   // straight(7.2);
   // turnToHeading(90);
   // straight(32);
@@ -510,7 +515,7 @@ int main() {
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
-  if(Competition.isEnabled()) selectAuton();
+  //if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
