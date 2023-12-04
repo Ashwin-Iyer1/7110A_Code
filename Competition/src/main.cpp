@@ -41,17 +41,9 @@ rotation rotationSensor = rotation(PORT1);
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
-vex::task cata;
 bool catatoggle = false;
 void stopCata() {
     Catapult.stop();
-}
-void cataSpin() {
-  //float bandStrength = (rotationSensor.angle(deg)<100 && rotationSensor.angle(deg)>18) ? rotationSensor.angle(deg)-20 : 0;
-  //float cataVoltage = fmin(10.9, 2 + bandStrength/7);
-  //float cataVoltage = 10.9;
-  //Catapult.spin(fwd,cataVoltage, volt);
-  Catapult.spin(fwd, 100, pct);
 }
 void bringCataDown(float angle) {
   while (rotationSensor.position(deg) < angle) {
@@ -73,19 +65,11 @@ int fullCataCycle() {
   stopCata();
   return 1;
 }
-int toggleCataTask() {
-  while(true) {
-    cataSpin();
-    wait(100, msec);
-  }
-  return 1;
-}
 void toggleCata() {
   if(!catatoggle) {
-    cata.resume();
+    Catapult.spin(fwd,100,pct);
     catatoggle = true;
   } else {
-    cata.suspend();
     stopCata();
     catatoggle = false;
   }
@@ -232,8 +216,6 @@ int shake() {
   return 1;
 }
 void pre_auton(void) {
-  cata = vex::task(toggleCataTask);
-  cata.suspend();
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -372,8 +354,21 @@ void AWPSameSide(void) {
   brakeAll();
 }
 void programmingSkills(void) {
-  bringCataDown();
-  straight(2.4);
+  inertialSensor.setHeading(90,deg);
+  arc(16.5,-90,left);
+  slam(reverse);
+  straight(10.5);
+  turnToHeading(73.5);
+  toggleCata();
+  wait(40,sec);
+  toggleCata();
+  straight(20);
+  turnToHeading(90);
+  straight(60);
+  turnToHeading(180);
+  straight(25);
+  turnToHeading(270);
+  slam(reverse);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -391,17 +386,6 @@ void programmingSkills(void) {
   turnToHeading(250);
   straight(3);
   */
-  toggleCata();
-  wait(45,sec);
-  toggleCata();
-  bringCataDown();
-  turnToHeading(10);
-  straight(60);
-  turnToHeading(90);
-  straight(36);
-  turnToHeading(270);
-  toggleWings();
-  slam(reverse);
 
   /*
   turnToHeading(270);
