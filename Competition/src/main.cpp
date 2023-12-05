@@ -355,7 +355,7 @@ void AWPSameSide(void) {
 }
 void programmingSkills(void) {
   inertialSensor.setHeading(90,deg);
-  arc(16.5,-90,left);
+  arc(-16.5,90,right);
   slam(reverse);
   straight(10.5);
   turnToHeading(73.5);
@@ -495,8 +495,8 @@ int main() {
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(sameSide);
-  //Competition.autonomous(programmingSkills);
+  // Competition.autonomous(sameSide);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
