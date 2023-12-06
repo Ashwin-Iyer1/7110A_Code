@@ -374,6 +374,7 @@ void programmingSkills(void) {
   arc(0,-90,right);
   toggleWings();
   arc(14, 180, left);
+  slam(reverse);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
