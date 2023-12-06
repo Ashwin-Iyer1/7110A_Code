@@ -365,14 +365,15 @@ void programmingSkills(void) {
   wait(30,sec);
   toggleCata();
   toggleWings();
-  straight(20);
-  turnToHeading(90);
-  straight(70);
-  turnToHeading(180);
-  straight(-12);
+  turnToHeading(303.5);
+  straight(30);
   turnToHeading(270);
+  straight(66);
+  turnToHeading(180);
+  straight(24);
+  arc(0,-90,right);
   toggleWings();
-  slam(reverse);
+  arc(14, 180, left);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
