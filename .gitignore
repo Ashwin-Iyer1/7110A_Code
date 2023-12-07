@@ -1,0 +1,7 @@
+/Competition/bin
+/Competition/build
+/Competition/.vscode
+compile_commands.json
+vex_project_settings.json
+settings.json
+/.vscode
