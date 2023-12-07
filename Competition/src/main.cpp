@@ -105,17 +105,19 @@ bool smartTurn(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.775;
+  float kp = 0.75;
   float kd = 0.00825;
   float ki = 0;
   float dt = 0.05;
+  float t=0;
   double currAngle = inertialSensor.rotation(deg);
   double wantedAngle = currAngle + rot;
   e = wantedAngle-inertialSensor.rotation(deg);
-  while (fabs(e) + fabs(d) > 2) {
+  while ((fabs(e) + fabs(d) > 2) && t<4) {
     e = wantedAngle-inertialSensor.rotation(deg);
     d = (e-eRec)/dt;
     i += e*dt;
+    t+=dt;
     eRec = e;
     float speed = kp*e + kd*d + ki*i;
     leftGroup.setVelocity(speed,pct);
@@ -154,7 +156,11 @@ void straight(float dist, distanceUnits units) {
   }
   float rotation = distToRot(dist);
   leftGroup.spinFor(rotation, deg, false);
-  rightGroup.spinFor(rotation,deg, true);
+  rightGroup.spinFor(rotation,deg, false);
+  for(double t=0; t<fabs(dist)/20; t+=0.025) {
+    if(leftGroup.isSpinning() && rightGroup.isSpinning()) break;
+    wait(0.025,sec);
+  }
 }
 void straight(float dist, float speed) {
   leftGroup.setVelocity(speed,pct);
@@ -206,7 +212,10 @@ void arc(float radius, float angle, turnType side) {
   rightGroup.setVelocity(rightspeed * 75,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, false);
-  wait(fabs(radius*angle)/1500,sec);
+  for(double t=0; t<fabs(fmax(leftArc,rightArc))/24; t+=0.025) {
+    if(!leftGroup.isSpinning() && !rightGroup.isSpinning()) break;
+    wait(0.025,sec);
+  }
   leftGroup.stop();
   rightGroup.stop();
 }
@@ -237,7 +246,7 @@ void brakeAll() {
 void oppositeSide(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
-  Intake.setVelocity(75,pct);
+  Intake.setVelocity(100,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
@@ -256,13 +265,14 @@ void oppositeSide(void) {
   turnToHeading(80);
   Intake.spin(reverse);
   wait(.2, sec);
-  straight(8);
+  straight(13);
   wait(0.3, sec);
-  straight(-8);
+  straight(-13);
   turnToHeading(30);
   Intake.spin(fwd);
   toggleBlocker();
   straight(-30);
+  smartTurn(25);
   
   // smartTurn(-90);
   /* GET THE FOURTH TRIBALL
@@ -298,6 +308,41 @@ void oppositeSide(void) {
   straight(4);
   */
 
+}
+void oppositeSideElim(void) {
+    //start close to left of tile touching wall
+  // vex::task run(bringCataDown);
+  Intake.setVelocity(100,pct);
+  // score alliance triball to near net    
+  inertialSensor.setHeading(270,deg); 
+  Intake.spin(fwd);   
+  straight(2, 50);
+  wait(1,sec);
+  straight(-24,75);
+  Intake.stop();
+  toggleWings();
+  arc(16.5,-90,right);
+  toggleWings();
+  turnToHeading(205);
+  slam(reverse);
+  turnToHeading(180);
+  arc(12,180,right);
+  straight(30);
+  turnToHeading(80);
+  Intake.spin(reverse);
+  wait(.2, sec);
+  straight(-8);
+  arc(0,180,right);
+  Intake.spin(fwd);
+  straight(10);
+  wait(0.5,sec);
+  straight(-8);
+  arc(0,180,right);
+  Intake.spin(reverse);
+  slam(fwd);
+  turnToHeading(30);
+  toggleBlocker();
+  straight(-30);
 }
 void sameSide(void) {
   vex::task run(bringCataDown);
@@ -382,15 +427,15 @@ void programmingSkills(void) {
   float realOrientation = inertialSensor.heading(deg);
   toggleWings();
   toggleCata();
-  wait(1,sec);
+  wait(33,sec);
   toggleCata();
   toggleWings();
   //bringCataDown(250);
   inertialSensor.setHeading(realOrientation,deg);
   turnToHeading(315);
-  arc(120,-20,right);
+  arc(120,-17,right);
   turnToHeading(270);
-  straight(-57);
+  straight(-54);
   //go to other side
   //toggleWings();
   arc(16.5,-90,right);
@@ -402,10 +447,13 @@ void programmingSkills(void) {
   turnToHeading(160);
   //backup
   toggleWings();
-  arc(45,210,left);
-  slam(reverse);
-  straight(10);
-  turnToHeading(270);
+  arc(32,210,left);
+  straight(8);
+  toggleWings();
+  arc(60,-20,right);
+  arc(0,-40,right);
+  toggleWings();
+  arc(60,20,left);
   slam(reverse);
   /*
   turnToHeading(315);
@@ -532,9 +580,9 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(oppositeSide);
+  //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  // Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
