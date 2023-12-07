@@ -53,7 +53,7 @@ void bringCataDown(float angle) {
       stopCata();
 }
 int bringCataDown() {
-  bringCataDown(85);
+  bringCataDown(270);
   return 1;
 }
 void cataMatchLoad() {
@@ -205,7 +205,10 @@ void arc(float radius, float angle, turnType side) {
   leftGroup.setVelocity(leftspeed * 75,pct);
   rightGroup.setVelocity(rightspeed * 75,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
-  rightGroup.spinFor(distToRot(rightArc), deg, true);
+  rightGroup.spinFor(distToRot(rightArc), deg, false);
+  wait(fabs(radius*angle)/1500,sec);
+  leftGroup.stop();
+  rightGroup.stop();
 }
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
@@ -238,7 +241,7 @@ void oppositeSide(void) {
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
-  straight(1.5,75);
+  straight(2,75);
   wait(0.25,sec);
   straight(-24,100);
   Intake.stop();
@@ -360,20 +363,33 @@ void programmingSkills(void) {
   straight(9);
   turnToHeading(73.5);
   straight(-4);
+  float realOrientation = inertialSensor.heading(deg);
   toggleWings();
   toggleCata();
-  wait(30,sec);
+  wait(1,sec);
   toggleCata();
   toggleWings();
-  turnToHeading(303.5);
-  straight(30);
+  //bringCataDown(250);
+  inertialSensor.setHeading(realOrientation,deg);
+  turnToHeading(315);
+  arc(120,-20,right);
   turnToHeading(270);
-  straight(66);
+  straight(-57);
+  //go to other side
+  //toggleWings();
+  arc(16.5,-90,right);
   turnToHeading(180);
-  straight(24);
-  arc(0,-90,right);
+  slam(reverse);
+  //push side triballs in
+  //toggleWings();
+  arc(10,160,right);
+  turnToHeading(160);
+  //backup
   toggleWings();
-  arc(14, 180, left);
+  arc(45,210,left);
+  slam(reverse);
+  straight(10);
+  turnToHeading(270);
   slam(reverse);
   /*
   turnToHeading(315);
