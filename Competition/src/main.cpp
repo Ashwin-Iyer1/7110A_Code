@@ -236,14 +236,14 @@ void brakeAll() {
 }
 void oppositeSide(void) {
   //start close to left of tile touching wall
-  vex::task run(bringCataDown);
-  Intake.setVelocity(100,pct);
+  // vex::task run(bringCataDown);
+  Intake.setVelocity(75,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
-  straight(2,75);
-  wait(0.25,sec);
-  straight(-24,100);
+  straight(2, 15);
+  wait(1,sec);
+  straight(-24,75);
   Intake.stop();
   toggleWings();
   arc(16.5,-90,right);
@@ -252,16 +252,32 @@ void oppositeSide(void) {
   slam(reverse);
   turnToHeading(180);
   arc(12,180,right);
-  straight(14);
+  straight(30);
+  turnToHeading(80);
   Intake.spin(reverse);
-  straight(-10);
-  Intake.stop();
-  turnToHeading(280);
+  wait(.2, sec);
+  straight(8);
+  wait(0.3, sec);
+  straight(-8);
+  turnToHeading(30);
   Intake.spin(fwd);
-  straight(24);
+  toggleBlocker();
+  straight(-30);
+  
+  // smartTurn(-90);
+  /* GET THE FOURTH TRIBALL
+  turnToHeading(275);
+  Intake.spin(fwd);
+  straight(13);
+  turnToHeading(70);
+  straight(8);
   Intake.stop();
-  turnToHeading(65);
-  slam(fwd);
+  Intake.spin(reverse);
+  wait(0.5, sec);
+  Intake.stop();
+  turnToHeading(260);
+  slam(reverse);
+  */
   /*
   straight(16);
   turnToHeading(0);
@@ -281,7 +297,7 @@ void oppositeSide(void) {
   toggleWings();
   straight(4);
   */
-  
+
 }
 void sameSide(void) {
   vex::task run(bringCataDown);
@@ -516,9 +532,9 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  //Competition.autonomous(oppositeSide);
+  Competition.autonomous(oppositeSide);
   //Competition.autonomous(sameSide);
-  Competition.autonomous(programmingSkills);
+  // Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
