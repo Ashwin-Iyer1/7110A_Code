@@ -105,6 +105,8 @@ float prevLeftRotation = 0;
 float prevRightRotation = 0;
 float orientation = 0;
 double driveRotationConstant = 0.8721445746*1.054572148;
+float x = 0;
+float y = 0;
 
 float distToRot(float dist) {
   return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
@@ -159,6 +161,15 @@ void odomUpdate() {
   float leftPos = (TopLeft.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius;
   float rightPos = (TopRight.position(deg)-prevRightRotation)/180*M_PI * wheelRadius;
   orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
+  float radOrientation = orientation/180*M_PI;
+  if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.001) {
+    x += (leftPos+rightPos)/2 * cosf(-radOrientation + M_PI/2);
+    y += (leftPos+rightPos)/2 * sinf(-radOrientation + M_PI/2);
+  } else {
+    float radius = (leftPos/((leftPos-rightPos)/drivetrainWidth)) - drivetrainWidth/2;
+    x += -radius * (cosf(radOrientation) - cosf(radOrientation - ((leftPos-rightPos)/drivetrainWidth)));
+    y += radius * (sinf(radOrientation) - sinf(radOrientation - ((leftPos-rightPos)/drivetrainWidth)));
+  }
 }
 void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::mm) {
