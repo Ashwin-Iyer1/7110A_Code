@@ -248,7 +248,7 @@ void arc(float radius, float angle, turnType side) {
   rightGroup.setVelocity(rightspeed * 75,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, false);
-  for(double t=0; t<fabs(fmax(leftArc,rightArc))/18; t+=0.025) {
+  for(double t=0; t<fabs(fmax(leftArc,rightArc))/20; t+=0.025) {
     if(!leftGroup.isSpinning() && !rightGroup.isSpinning()) break;
     wait(0.025,sec);
   }
@@ -282,77 +282,56 @@ void brakeAll() {
 void oppositeSide(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
-  Intake.setVelocity(100,pct);
+  Intake.setVelocity(75,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
-  straight(2, 15);
-  wait(1,sec);
+  straight(3, 35);
+  wait(1.5,sec);
   straight(-24,75);
-  Intake.stop();
+  // Intake.stop();
   toggleWings();
-  arc(16.5,-90,right);
+  arc(16.5,-100,right);
   toggleWings();
   turnToHeading(205);
+  slam(reverse);
+  straight(8);
   slam(reverse);
   turnToHeading(180);
   arc(12,180,right);
   straight(30);
+  
   turnToHeading(80);
   Intake.spin(reverse);
-  wait(.2, sec);
+  wait(1, sec);
+  straight(-5);
+  /*
   straight(13);
   wait(0.3, sec);
+  straight(-5);
+  wait(0.1, sec);
+  straight(8);
+  wait(0.1, sec);
+  Intake.stop();
   straight(-13);
-  turnToHeading(30);
+  turnToHeading(35);
   Intake.spin(fwd);
   toggleBlocker();
-  straight(-30);
-  smartTurn(25);
-  
-  // smartTurn(-90);
-  /* GET THE FOURTH TRIBALL
-  turnToHeading(275);
-  Intake.spin(fwd);
-  straight(13);
-  turnToHeading(70);
-  straight(8);
-  Intake.stop();
-  Intake.spin(reverse);
-  wait(0.5, sec);
-  Intake.stop();
-  turnToHeading(260);
-  slam(reverse);
+  straight(-27);
+  smartTurn(15);
   */
-  /*
-  straight(16);
-  turnToHeading(0);
-  Intake.spin(forward);
-  straight(5);
-  turnToHeading(90);
-  Intake.stop();
-  Intake.spin(reverse);
-  slam(fwd);
-  Intake.stop();
-  */
-  //code for touching elevation
-  /*
-  smartTurn(135);
-  straight(36);
-  smartTurn(45);
-  toggleWings();
-  straight(4);
-  */
-
+ turnToHeading(260);
+ slam(reverse);
+ straight(5);
 }
 void oppositeSideElim(void) {
-    //start close to left of tile touching wall
+  //start close to left of tile touching wall
   // vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
   inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
-  straight(2, 50);
+  straight(3, 35);
   wait(1,sec);
   straight(-24,75);
   Intake.stop();
@@ -366,16 +345,16 @@ void oppositeSideElim(void) {
   straight(30);
   turnToHeading(80);
   Intake.spin(reverse);
-  wait(.2, sec);
+  wait(0.3, sec);
   straight(-8);
-  arc(0,180,right);
+  turnToHeading(255);
   Intake.spin(fwd);
-  straight(10);
-  wait(0.5,sec);
+  straight(18);
+  wait(0.1, sec);
   straight(-8);
-  arc(0,180,right);
+  turnToHeading(85);
   Intake.spin(reverse);
-  slam(fwd);
+  straight(-13);
   turnToHeading(30);
   toggleBlocker();
   straight(-30);
@@ -395,19 +374,18 @@ void sameSide(void) {
   turnToHeading(90);
   slam(reverse);
   toggleWings();
-  arc(15, 180, right);
-  straight(24);
+  arc(13, 180, right);
+  straight(27);
   turnToHeading(0);
   toggleWings();
-  straight(2);
   arc(16.5, -90, right);
   toggleWings();
   turnToHeading(315);
   straight(-8);
   turnToHeading(270);
   Blocker.set(true);
-  straight(-30);
-  straight(-4,35);
+  straight(-22);
+  straight(-12,50);
   smartTurn(20);
   // straight(7.2);
   // turnToHeading(90);
@@ -431,6 +409,7 @@ void sameSide(void) {
 void AWPSameSide(void) {
   inertialSensor.setHeading(90,deg);
   arc(16.5,90,left);
+  turnToHeading(180);
   slam(reverse);
   straight(4);
   turnToHeading(0);
@@ -453,7 +432,7 @@ void programmingSkills(void) {
   slam(reverse);
   straight(9);
   turnToHeading(73.5);
-  straight(-4);
+  straight(-3);
   float realOrientation = inertialSensor.heading(deg);
   toggleWings();
   toggleCata();
@@ -468,23 +447,25 @@ void programmingSkills(void) {
   straight(-54);
   //go to other side
   //toggleWings();
-  arc(16.5,-90,right);
+  arc(21,-90,right);
   turnToHeading(180);
   slam(reverse);
   //push side triballs in
   //toggleWings();
-  arc(10,160,right);
+  arc(12.5,160,right);
   turnToHeading(160);
   //backup
   toggleWings();
-  arc(32,210,left);
+  arc(32,110,left);
   straight(8);
   toggleWings();
-  arc(60,-20,right);
+  wait(0.5,sec);
+  arc(60,20,right);
   arc(0,-40,right);
   toggleWings();
   arc(60,20,left);
   slam(reverse);
+  straight(6);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -632,7 +613,18 @@ void usercontrol(void) {
     wait(0.025,sec);
   }
 }
-
+void driverSkills(void) {
+  inertialSensor.setHeading(90,deg);
+  arc(16.5,90,left);
+  slam(reverse);
+  straight(9);
+  turnToHeading(73.5);
+  straight(-3);
+  float realOrientation = inertialSensor.heading(deg);
+  toggleWings();
+  toggleCata();
+  usercontrol();
+}
 //
 // Main will set up the competition functions and callbacks.
 //
@@ -642,14 +634,17 @@ int main() {
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(oppositeSide);
+  //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  //Competition.autonomous(programmingSkills);
+  // Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
+  //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
+    
     Brain.Screen.clearScreen(); //clears the back buffer for drawing, default clear color is black
         autonSelection(); //draws our grid to the back buffer
         Brain.Screen.render(); //flips the back buffer to the screen all at once, preventing flickering
