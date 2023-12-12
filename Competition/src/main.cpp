@@ -82,7 +82,7 @@ void toggleBlocker() {
 }
 
 float gearRatio = 36.0/84.0;
-float wheelDiameter = 4;
+float wheelDiameter = 4.125;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
 float drivetrainWidth = 12.5;
@@ -92,8 +92,6 @@ float orientation = 0;
 float x = 0;
 float y = 0;
 double driveRotationConstant = 0.8721445746*1.054572148;
-float x = 0;
-float y = 0;
 
 float distToRot(float dist) {
   return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
@@ -176,9 +174,21 @@ bool turnToHeading(float heading) {
   smartTurn(closestPath);
   return true;
 }
+bool turnToHeadingOdom(float heading) {
+  float clockwiseRotation = heading-inertialSensor.heading();
+  float closestPath = 0;
+  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
+    closestPath = clockwiseRotation;
+    if(fabs(clockwiseRotation-360) < (closestPath)) closestPath-=360;
+  } else {
+    closestPath = clockwiseRotation+360;
+  }
+  smartTurnOdom(closestPath);
+  return true;
+}
 void odomUpdate() {
-  float leftPos = (leftGroup.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius;
-  float rightPos = (rightGroup.position(deg)-prevRightRotation)/180*M_PI * wheelRadius;
+  float leftPos = (leftGroup.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius * gearRatio;
+  float rightPos = (rightGroup.position(deg)-prevRightRotation)/180*M_PI * wheelRadius * gearRatio;
   orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
   float radOrientation = orientation/180*M_PI;
   if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.001) {
@@ -265,6 +275,11 @@ void arc(float radius, float angle, turnType side) {
   }
   leftGroup.stop();
   rightGroup.stop();
+}
+bool moveToPoint(float xPos, float yPos) {
+  turnToHeadingOdom(atanf((xPos-x)/(yPos-y))/M_PI*180);
+  straight(sqrtf(pow(xPos-x,2) + pow(yPos-y,2)));
+  return true;
 }
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
@@ -551,9 +566,13 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 
 void usercontrol(void) {
+  moveToPoint(35,55);
+  moveToPoint(59,79);
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
+  x = 35;
+  y = 7;
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
@@ -618,9 +637,9 @@ void usercontrol(void) {
     leftGroup.spin(forward);
     rightGroup.spin(forward);
     //test odom
-    //odomUpdate();
-    //Controller1.Screen.newLine();
-    //Controller1.Screen.print("odom: %.2f inertial %.2f", orientation, inertialSensor.rotation());
+    odomUpdate();
+    Controller1.Screen.newLine();
+    Controller1.Screen.print("o: %.1f i: %.1f x: %.1f y: %.1f", orientation, inertialSensor.rotation(), x, y);
     wait(0.025,sec);
   }
 }
