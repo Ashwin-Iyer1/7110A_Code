@@ -453,7 +453,9 @@ void AWPSameSide(void) {
   straight(-8,35);
 }
 void programmingSkills(void) {
+  
   inertialSensor.setHeading(90,deg);
+  
   arc(16.5,90,left);
   slam(reverse);
   straight(9);
@@ -466,32 +468,52 @@ void programmingSkills(void) {
   toggleCata();
   toggleWings();
   //bringCataDown(250);
+  //go to other side
   inertialSensor.setHeading(realOrientation,deg);
   turnToHeading(315);
   arc(120,-17,right);
   turnToHeading(270);
+  
   straight(-54);
-  //go to other side
-  //toggleWings();
-  arc(21,-90,right);
+  toggleWings();
+  straight(-18);
+  turnToHeading(225);
+  straight(-15);
   turnToHeading(180);
+  straight(-5);
+  toggleWings();
+  turnToHeading(200);
   slam(reverse);
+  turnToHeading(180);
   //push side triballs in
+  // arc(21,-90,right);
+  // turnToHeading(180);
+  // slam(reverse);
   //toggleWings();
+  //backup
   arc(12.5,160,right);
   turnToHeading(160);
-  //backup
+  straight(-5);
+  //push front triballs in
   toggleWings();
   arc(32,110,left);
   straight(8);
   toggleWings();
   wait(0.5,sec);
+  //push front triballs in again
   arc(60,20,right);
   arc(0,-40,right);
   toggleWings();
   arc(60,20,left);
   slam(reverse);
-  straight(6);
+  
+  straight(5);
+  toggleWings();
+  straight(22);
+  turnToHeading(120);
+  toggleWings();
+  arc(20, 140, left);
+  slam(reverse);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -663,10 +685,10 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(oppositeSide);
+  // Competition.autonomous(oppositeSide);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  // Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
