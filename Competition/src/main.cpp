@@ -191,13 +191,13 @@ void odomUpdate() {
   float rightPos = (rightGroup.position(deg)-prevRightRotation)/180*M_PI * wheelRadius * gearRatio;
   orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
   float radOrientation = orientation/180*M_PI;
-  if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.001) {
+  if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.005) {
     x += (leftPos+rightPos)/2 * cosf(-radOrientation + M_PI/2);
     y += (leftPos+rightPos)/2 * sinf(-radOrientation + M_PI/2);
   } else {
     float radius = (leftPos/((leftPos-rightPos)/drivetrainWidth)) - drivetrainWidth/2;
-    x += -radius * (cosf(radOrientation) - cosf(radOrientation - ((leftPos-rightPos)/drivetrainWidth)));
-    y += radius * (sinf(radOrientation) - sinf(radOrientation - ((leftPos-rightPos)/drivetrainWidth)));
+    x += -radius * (sinf(-(radOrientation-M_PI/2)) - sinf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
+    y += radius * (cosf(-(radOrientation-M_PI/2)) - cosf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
   }
   prevLeftRotation = leftGroup.position(deg);
   prevRightRotation = rightGroup.position(deg);
