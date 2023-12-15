@@ -453,7 +453,9 @@ void AWPSameSide(void) {
   straight(-8,35);
 }
 void programmingSkills(void) {
+  
   inertialSensor.setHeading(90,deg);
+  
   arc(16.5,90,left);
   slam(reverse);
   straight(9);
@@ -466,10 +468,12 @@ void programmingSkills(void) {
   //toggleCata();
   //toggleWings();
   //bringCataDown(250);
+  //go to other side
   inertialSensor.setHeading(realOrientation,deg);
   turnToHeading(315);
   arc(120,-17,right);
   turnToHeading(270);
+  
   straight(-54);
   //go to other side
   //toggleWings();
@@ -479,7 +483,11 @@ void programmingSkills(void) {
   straight(4);
   slam(reverse);
   //push side triballs in
+  // arc(21,-90,right);
+  // turnToHeading(180);
+  // slam(reverse);
   //toggleWings();
+  //backup
   arc(12.5,160,right);
   turnToHeading(160);
   //backup
@@ -666,7 +674,7 @@ int main() {
   Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  // Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
