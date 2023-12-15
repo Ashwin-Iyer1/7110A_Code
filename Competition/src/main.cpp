@@ -10,6 +10,8 @@
 #include "vex.h"
 #include <iostream>
 #include <fstream>
+#include <iterator>
+#include <vector>
 #include "stdarg.h"
 #include <cstring>
 #include <string.h>
@@ -89,9 +91,11 @@ float drivetrainWidth = 12.5;
 float prevLeftRotation = 0;
 float prevRightRotation = 0;
 float orientation = 0;
+float orientationHeading = fmod(orientation+36000,360);
 float x = 0;
 float y = 0;
 double driveRotationConstant = 0.8721445746*1.054572148;
+vex::task odom;
 
 float distToRot(float dist) {
   return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
@@ -190,6 +194,7 @@ void odomUpdate() {
   float leftPos = (leftGroup.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius * gearRatio;
   float rightPos = (rightGroup.position(deg)-prevRightRotation)/180*M_PI * wheelRadius * gearRatio;
   orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
+  orientationHeading = fmod(orientation+36000,360);
   float radOrientation = orientation/180*M_PI;
   if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.005) {
     x += (leftPos+rightPos)/2 * cosf(-radOrientation + M_PI/2);
@@ -201,6 +206,12 @@ void odomUpdate() {
   }
   prevLeftRotation = leftGroup.position(deg);
   prevRightRotation = rightGroup.position(deg);
+}
+int runOdom() {
+  while(true) {
+    odomUpdate();
+    wait(25,msec);
+  }
 }
 void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::mm) {
@@ -277,8 +288,38 @@ void arc(float radius, float angle, turnType side) {
   rightGroup.stop();
 }
 bool moveToPoint(float xPos, float yPos) {
-  turnToHeadingOdom(atanf((xPos-x)/(yPos-y))/M_PI*180);
+  turnToHeadingOdom(-atanf((xPos-x)/(yPos-y))/M_PI*180);
   straight(sqrtf(pow(xPos-x,2) + pow(yPos-y,2)));
+  return true;
+}
+bool followPath(const std::vector<std::vector<int>>& points) {
+  for(const auto& coordinates: points) {
+    float xTarget = coordinates[0];
+    float yTarget = coordinates[1];
+    float e = 0;
+    float d = 0;
+    float i = 0;
+    float eRec = 0;
+    float kp = 0.75;
+    float kd = 0.1;
+    float ki = 0.5;
+    float dt = 0.05;
+    float angle = -atan((yTarget-y)/(xTarget-x))*180/M_PI;
+    float setpoint = angle + ((yTarget-y) > 0 ? 0 : 180);
+    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 5) {
+      e = setpoint-fmod(orientation,360);
+      d = (e-eRec)/dt;
+      i += e*dt;
+      eRec = e;
+      leftGroup.setVelocity(70 + e*kp + d*kd + i*ki,pct);
+      rightGroup.setVelocity(70 - (e*kp + d*kd + i*ki),pct);
+      leftGroup.spin(fwd);
+      rightGroup.spin(fwd);
+      wait(dt,sec);
+    }
+  }
+  leftGroup.stop();
+  rightGroup.stop();
   return true;
 }
 //In case intake requires the robot to rock back and forth to outtake
@@ -456,20 +497,22 @@ void programmingSkills(void) {
   
   inertialSensor.setHeading(90,deg);
   
-  arc(16.5,90,left);
+  arc(18,90,left);
   slam(reverse);
-  straight(9);
+  straight(10.5);
   turnToHeading(73.5);
   straight(-3);
+  turnToHeading(69);
   float realOrientation = inertialSensor.heading(deg);
-  //toggleWings();
-  //toggleCata();
-  //wait(33,sec);
-  //toggleCata();
-  //toggleWings();
+  toggleWings();
+  toggleCata();
+  wait(33,sec);
+  toggleCata();
+  toggleWings();
   //bringCataDown(250);
   //go to other side
   inertialSensor.setHeading(realOrientation,deg);
+  straight(4);
   turnToHeading(315);
   arc(120,-17,right);
   turnToHeading(270);
@@ -488,18 +531,30 @@ void programmingSkills(void) {
   // slam(reverse);
   //toggleWings();
   //backup
-  arc(12.5,160,right);
+  arc(11.5,160,right);
   turnToHeading(160);
   //backup
-  straight(16);
+  straight(-22);
   toggleWings();
-  arc(32,110,left);
+  arc(15,102.5,left);
   slam(reverse);
   straight(6);
+  slam(reverse);
+  straight(8);
   toggleWings();
-  straight(-24);
-  arc(0,-30,right);
-  arc(60,45,left);
+  arc(50,40,right);
+  arc(0,-80,right);
+  toggleWings();
+  arc(50,40,left);
+  slam(reverse);
+
+  straight(5);
+  toggleWings();
+  straight(22);
+  turnToHeading(120);
+  toggleWings();
+  arc(20, 140, left);
+  slam(reverse);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -533,7 +588,17 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  arc(0,90,right);
+  orientation = 90;
+  x = 35;
+  y = 11;
+  odom = vex::task(runOdom);
+  followPath({
+    {33,35},
+    {48,70},
+    {36,104},
+    {40,130},
+    {108,130}
+  });
 }
 std::string progAlignment[3][3] = {
   {"Safe Opposite Side", "Cool Opposite Side", ""},
@@ -574,8 +639,6 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 
 void usercontrol(void) {
-  moveToPoint(35,55);
-  moveToPoint(59,79);
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
@@ -586,6 +649,7 @@ void usercontrol(void) {
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
   Controller1.ButtonLeft.pressed(cataMatchLoad);
+  //odom = vex::task(runOdom);
   while (true) {
     //tank drive
 
@@ -645,19 +709,19 @@ void usercontrol(void) {
     leftGroup.spin(forward);
     rightGroup.spin(forward);
     //test odom
-    odomUpdate();
     Controller1.Screen.newLine();
-    Controller1.Screen.print("o: %.1f i: %.1f x: %.1f y: %.1f", orientation, inertialSensor.rotation(), x, y);
+    Controller1.Screen.print("o: %.1f i: %.1f x: %.1f y: %.1f", orientationHeading, inertialSensor.rotation(), x, y);
     wait(0.025,sec);
   }
 }
 void driverSkills(void) {
   inertialSensor.setHeading(90,deg);
-  arc(16.5,90,left);
+  arc(18,90,left);
   slam(reverse);
-  straight(9);
+  straight(11);
   turnToHeading(73.5);
   straight(-3);
+  turnToHeading(69);
   float realOrientation = inertialSensor.heading(deg);
   toggleWings();
   toggleCata();
@@ -674,12 +738,11 @@ int main() {
   Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  Competition.autonomous(programmingSkills);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  Competition.drivercontrol(usercontrol);
-  //Competition.drivercontrol(driverSkills);
+  //Competition.drivercontrol(usercontrol);
+  Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
     
