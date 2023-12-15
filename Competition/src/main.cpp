@@ -460,11 +460,11 @@ void programmingSkills(void) {
   turnToHeading(73.5);
   straight(-3);
   float realOrientation = inertialSensor.heading(deg);
-  toggleWings();
-  toggleCata();
-  wait(33,sec);
-  toggleCata();
-  toggleWings();
+  //toggleWings();
+  //toggleCata();
+  //wait(33,sec);
+  //toggleCata();
+  //toggleWings();
   //bringCataDown(250);
   inertialSensor.setHeading(realOrientation,deg);
   turnToHeading(315);
@@ -473,25 +473,25 @@ void programmingSkills(void) {
   straight(-54);
   //go to other side
   //toggleWings();
-  arc(21,-90,right);
+  arc(22.5,-90,right);
   turnToHeading(180);
+  slam(reverse);
+  straight(4);
   slam(reverse);
   //push side triballs in
   //toggleWings();
   arc(12.5,160,right);
   turnToHeading(160);
   //backup
+  straight(16);
   toggleWings();
   arc(32,110,left);
-  straight(8);
-  toggleWings();
-  wait(0.5,sec);
-  arc(60,20,right);
-  arc(0,-40,right);
-  toggleWings();
-  arc(60,20,left);
   slam(reverse);
   straight(6);
+  toggleWings();
+  straight(-24);
+  arc(0,-30,right);
+  arc(60,45,left);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -659,11 +659,11 @@ void driverSkills(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
-  Brain.Screen.render(true,false); //set VSync (vertical sync) on, automatic refresh to off
+  //Brain.Screen.render(true,false); //set VSync (vertical sync) on, automatic refresh to off
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(oppositeSide);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
   // Competition.autonomous(programmingSkills);
@@ -689,6 +689,33 @@ int main() {
         } else {
             wait(.1, sec);
         }
+        
+    /*if(Controller1.ButtonL1.pressing()) {
+      Controller1.rumble("..-");
+      Competition.autonomous(AWPSameSide);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("safe same side");
+    } else if (Controller1.ButtonL2.pressing()) {
+      Controller1.rumble("..---");
+      Competition.autonomous(sameSide);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("cool same side");
+    } else if (Controller1.ButtonR1.pressing()) {
+      Controller1.rumble("---");
+      Competition.autonomous(oppositeSide);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("safe opposite side");
+    } else if (Controller1.ButtonR2.pressing()) {
+      Controller1.rumble("-----");
+      Competition.autonomous(oppositeSideElim);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("cool opposite side");
+    } else if (Controller1.ButtonUp.pressing()) {
+      Controller1.rumble(".....");
+      Competition.autonomous(programmingSkills);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("prog skills");
+    }*/
     wait(100, msec);
   }
 }
