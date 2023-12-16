@@ -543,18 +543,14 @@ void programmingSkills(void) {
   straight(8);
   toggleWings();
   arc(50,40,right);
-  arc(0,-80,right);
+  turnToHeading(0);
+  straight(40);
+  turnToHeading(315);
   toggleWings();
-  arc(50,40,left);
-  slam(reverse);
-
-  straight(5);
+  arc(70,-45,right);
+  straight(10);
   toggleWings();
-  straight(22);
-  turnToHeading(120);
-  toggleWings();
-  arc(20, 140, left);
-  slam(reverse);
+  straight(50);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
