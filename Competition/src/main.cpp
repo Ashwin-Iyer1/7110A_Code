@@ -210,7 +210,9 @@ void odomUpdate() {
 int runOdom() {
   while(true) {
     odomUpdate();
-    wait(25,msec);
+    //Controller1.Screen.newLine();
+    //Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
+    wait(50,msec);
   }
 }
 void straight(float dist, distanceUnits units) {
@@ -300,21 +302,23 @@ bool followPath(const std::vector<std::vector<int>>& points) {
     float d = 0;
     float i = 0;
     float eRec = 0;
-    float kp = 0.75;
-    float kd = 0.1;
-    float ki = 0.5;
+    float kp = 0.03;
+    float kd = 0.0;
+    float ki = 0.015;
     float dt = 0.05;
-    float angle = -atan((yTarget-y)/(xTarget-x))*180/M_PI;
+    float angle = atan((xTarget-x)/(yTarget-y))*180/M_PI;
     float setpoint = angle + ((yTarget-y) > 0 ? 0 : 180);
-    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 5) {
+    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 25) {
       e = setpoint-fmod(orientation,360);
       d = (e-eRec)/dt;
       i += e*dt;
       eRec = e;
-      leftGroup.setVelocity(70 + e*kp + d*kd + i*ki,pct);
-      rightGroup.setVelocity(70 - (e*kp + d*kd + i*ki),pct);
+      leftGroup.setVelocity(40 - (e*kp + d*kd + i*ki),pct);
+      rightGroup.setVelocity(40 + (e*kp + d*kd + i*ki),pct);
       leftGroup.spin(fwd);
       rightGroup.spin(fwd);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("%.1f, %.1f, %.1f", x, y, pow(xTarget-x,2) + pow(yTarget-y,2));
       wait(dt,sec);
     }
   }
@@ -584,12 +588,11 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  orientation = 90;
+  orientation = 0;
   x = 35;
   y = 11;
   odom = vex::task(runOdom);
   followPath({
-    {33,35},
     {48,70},
     {36,104},
     {40,130},
@@ -645,7 +648,7 @@ void usercontrol(void) {
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
   Controller1.ButtonLeft.pressed(cataMatchLoad);
-  //odom = vex::task(runOdom);
+  odom = vex::task(runOdom);
   while (true) {
     //tank drive
 
@@ -704,9 +707,6 @@ void usercontrol(void) {
     // Spin all drivetrain motors in the forward direction.
     leftGroup.spin(forward);
     rightGroup.spin(forward);
-    //test odom
-    Controller1.Screen.newLine();
-    Controller1.Screen.print("o: %.1f i: %.1f x: %.1f y: %.1f", orientationHeading, inertialSensor.rotation(), x, y);
     wait(0.025,sec);
   }
 }
@@ -731,14 +731,14 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(programmingSkills);
+  //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  //Competition.autonomous(testing);
+  Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  //Competition.drivercontrol(usercontrol);
-  Competition.drivercontrol(driverSkills);
+  Competition.drivercontrol(usercontrol);
+  //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
     
@@ -749,6 +749,7 @@ int main() {
             while (Brain.Screen.pressing()) { //wait until the user stops touching the screen
                 Brain.Screen.clearScreen(); //while waiting, maintain the grid and draw
                 autonSelection();                //a touch indicator around the user's finger
+                draw_touch();
                 Brain.Screen.render();
             }
             wait(1, sec); //wait a second for their hand to get a little further away
