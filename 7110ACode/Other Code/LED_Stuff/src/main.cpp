@@ -233,7 +233,7 @@ void usercontrol(void) {
   //inertialSensor.calibrate();
   //waitUntil(!inertialSensor.isCalibrating());
   int deadband = 5;
-  bool intakeMode =Z false;
+  bool intakeMode = false;
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
