@@ -15,6 +15,7 @@
 #include "stdarg.h"
 #include <cstring>
 #include <string.h>
+#include "sylib/sylib.hpp"
 #include "vex_motor.h"
 
 using namespace vex;
@@ -44,6 +45,13 @@ pot potentiometer = pot(Brain.ThreeWirePort.C);
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
+
+sylib::Addrled BlockerLEDS;
+sylib::Addrled Under1;
+sylib::Addrled Under2;
+sylib::Addrled Top;
+
+
 bool catatoggle = false;
 void stopCata() {
     Catapult.stop();
@@ -82,6 +90,13 @@ void toggleWings() {
 }
 void toggleBlocker() {
   Blocker.set(!Blocker.value());
+  if(Blocker.value()) {
+    BlockerLEDS.gradient(0xFF0000, 0xFFFFFF, 0, 0, false, true);
+    BlockerLEDS.cycle(*BlockerLEDS, 10);
+  } else {
+    BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS.cycle(*BlockerLEDS, 10);
+  }
 }
 
 float gearRatio = 36.0/84.0;
@@ -336,6 +351,11 @@ int shake() {
   return 1;
 }
 void pre_auton(void) {
+  sylib::initialize();
+  BlockerLEDS = sylib::Addrled(22,8,27);
+  Under1 = sylib::Addrled(22,7,14);
+  Under2 = sylib::Addrled(22,6,13);
+  Top = sylib::Addrled(22,5,23);
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -640,6 +660,20 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 */
 void usercontrol(void) {
+
+    Top.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Top.cycle(*Top, 10);
+
+    Under1.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under1.cycle(*Under1, 10);
+
+    Under2.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under2.cycle(*Under2, 10);
+
+    BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS.cycle(*BlockerLEDS, 10);
+    std::uint32_t clock = sylib::millis();
+
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
@@ -653,7 +687,7 @@ void usercontrol(void) {
   odom = vex::task(runOdom);
   while (true) {
     //tank drive
-
+    sylib::delay_until(&clock, 10);
     // Get the velocity percentage of the left motor. (Axis3)
     //int leftMotorSpeed = intakeMode ? Controller1.Axis3.position() : (-Controller1.Axis2.position());
     // Get the velocity percentage of the right motor. (Axis2)
