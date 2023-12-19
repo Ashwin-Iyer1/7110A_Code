@@ -39,6 +39,7 @@ inertial inertialSensor = inertial(PORT5);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation rotationSensor = rotation(PORT1);
+pot potentiometer = pot(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
@@ -599,6 +600,7 @@ void testing(void) {
     {108,130}
   });
 }
+/*
 std::string progAlignment[3][3] = {
   {"Safe Opposite Side", "Cool Opposite Side", ""},
   {"Safe Same Side", "Cool Same Side", ""},
@@ -636,7 +638,7 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
   Brain.Screen.drawRectangle(x, y, w, h);
   Brain.Screen.printAt(x+(w/2), y+(h/2), text);
 }
-
+*/
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
   int deadband = 5;
@@ -727,6 +729,9 @@ void driverSkills(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+  typedef void (*callback)();
+  callback progs[6] = {oppositeSide, oppositeSideElim, AWPSameSide, sameSide, programmingSkills, testing};
+  std::string progNames[6] = {"Safe Opposite", "Cool Opposite", "Safe Same", "Cool Same", "Skills", "test"};
   //Brain.Screen.render(true,false); //set VSync (vertical sync) on, automatic refresh to off
   // Run the pre-autonomous function.
   pre_auton();
@@ -741,7 +746,7 @@ int main() {
   //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
-    
+    /*
     Brain.Screen.clearScreen(); //clears the back buffer for drawing, default clear color is black
         autonSelection(); //draws our grid to the back buffer
         Brain.Screen.render(); //flips the back buffer to the screen all at once, preventing flickering
@@ -756,34 +761,12 @@ int main() {
             Competition.autonomous(progs[Brain.Screen.yPosition()/80][Brain.Screen.xPosition()/160]);
         } else {
             wait(.1, sec);
-        }
-        
-    /*if(Controller1.ButtonL1.pressing()) {
-      Controller1.rumble("..-");
-      Competition.autonomous(AWPSameSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("safe same side");
-    } else if (Controller1.ButtonL2.pressing()) {
-      Controller1.rumble("..---");
-      Competition.autonomous(sameSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("cool same side");
-    } else if (Controller1.ButtonR1.pressing()) {
-      Controller1.rumble("---");
-      Competition.autonomous(oppositeSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("safe opposite side");
-    } else if (Controller1.ButtonR2.pressing()) {
-      Controller1.rumble("-----");
-      Competition.autonomous(oppositeSideElim);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("cool opposite side");
-    } else if (Controller1.ButtonUp.pressing()) {
-      Controller1.rumble(".....");
-      Competition.autonomous(programmingSkills);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("prog skills");
-    }*/
+        }*/
+    int progNumber = (int)(potentiometer.angle(deg)/40);
+    Competition.autonomous(progs[progNumber]);
+    if(progNumber==4) Competition.drivercontrol(driverSkills);
+    Brain.Screen.clearScreen();
+    Brain.Screen.printAt(240,120,progNames[progNumber].c_str());
     wait(100, msec);
   }
 }
