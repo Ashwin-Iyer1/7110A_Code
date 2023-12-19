@@ -15,7 +15,6 @@
 #include "stdarg.h"
 #include <cstring>
 #include <string.h>
-#include "sylib/sylib.hpp"
 #include "vex_motor.h"
 
 using namespace vex;
@@ -337,7 +336,6 @@ int shake() {
   return 1;
 }
 void pre_auton(void) {
-  sylib::initialize();
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -653,12 +651,7 @@ void usercontrol(void) {
   Controller1.ButtonX.pressed(toggleBlocker);
   Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
-  auto addrled = sylib::Addrled(22,8,46);
-    addrled.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    addrled.cycle(*addrled, 10);
-    std::uint32_t clock = sylib::millis();
   while (true) {
-    sylib::delay_until(&clock, 10);
     //tank drive
 
     // Get the velocity percentage of the left motor. (Axis3)
