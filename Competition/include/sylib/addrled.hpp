@@ -41,7 +41,7 @@ typedef struct {
  * \brief WS2812B Addressable LED Strip Controller
  */
 class Addrled : private Device {
-   private:
+   public:
     static const std::vector<uint32_t> off_buffer;
     const std::uint8_t smart_port;
     const std::uint8_t adi_port;

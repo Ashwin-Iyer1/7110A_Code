@@ -16,6 +16,7 @@
 #include <cstring>
 #include <string.h>
 #include "sylib/sylib.hpp"
+#include "sylib/addrled.hpp"
 #include "vex_motor.h"
 
 using namespace vex;
@@ -46,11 +47,10 @@ motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
 
-sylib::Addrled BlockerLEDS;
-sylib::Addrled Under1;
-sylib::Addrled Under2;
-sylib::Addrled Top;
-
+sylib::Addrled* BlockerLEDS;
+sylib::Addrled* Under1;
+sylib::Addrled* Under2;
+sylib::Addrled* Top;
 
 bool catatoggle = false;
 void stopCata() {
@@ -91,11 +91,11 @@ void toggleWings() {
 void toggleBlocker() {
   Blocker.set(!Blocker.value());
   if(Blocker.value()) {
-    BlockerLEDS.gradient(0xFF0000, 0xFFFFFF, 0, 0, false, true);
-    BlockerLEDS.cycle(*BlockerLEDS, 10);
+    BlockerLEDS -> gradient(0xFF0000, 0xFFFFFF, 0, 0, false, true);
+    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
   } else {
-    BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    BlockerLEDS.cycle(*BlockerLEDS, 10);
+    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
   }
 }
 
@@ -352,10 +352,10 @@ int shake() {
 }
 void pre_auton(void) {
   sylib::initialize();
-  BlockerLEDS = sylib::Addrled(22,8,27);
-  Under1 = sylib::Addrled(22,7,14);
-  Under2 = sylib::Addrled(22,6,13);
-  Top = sylib::Addrled(22,5,23);
+  BlockerLEDS = new sylib::Addrled(22,8,27);
+  Under1 = new sylib::Addrled(22,7,14);
+  Under2 = new sylib::Addrled(22,6,13);
+  Top = new sylib::Addrled(22,5,23);
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -661,17 +661,17 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 */
 void usercontrol(void) {
 
-    Top.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Top.cycle(*Top, 10);
+    Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Top -> cycle(Top -> buffer, 10);
 
-    Under1.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under1.cycle(*Under1, 10);
+    Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under1 -> cycle(Under1 -> buffer, 10);
 
-    Under2.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under2.cycle(*Under2, 10);
+    Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under2 -> cycle(Under2 -> buffer, 10);
 
-    BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    BlockerLEDS.cycle(*BlockerLEDS, 10);
+    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
     std::uint32_t clock = sylib::millis();
 
   Intake.setVelocity(100,pct);
