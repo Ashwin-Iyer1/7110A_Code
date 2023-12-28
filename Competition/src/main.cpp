@@ -39,6 +39,7 @@ inertial inertialSensor = inertial(PORT5);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation rotationSensor = rotation(PORT1);
+pot potentiometer = pot(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
@@ -212,7 +213,9 @@ void odomUpdate() {
 int runOdom() {
   while(true) {
     odomUpdate();
-    wait(25,msec);
+    //Controller1.Screen.newLine();
+    //Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
+    wait(50,msec);
   }
 }
 void straight(float dist, distanceUnits units) {
@@ -302,21 +305,23 @@ bool followPath(const std::vector<std::vector<int>>& points) {
     float d = 0;
     float i = 0;
     float eRec = 0;
-    float kp = 0.75;
-    float kd = 0.1;
-    float ki = 0.5;
+    float kp = 0.03;
+    float kd = 0.0;
+    float ki = 0.015;
     float dt = 0.05;
-    float angle = -atan((yTarget-y)/(xTarget-x))*180/M_PI;
+    float angle = atan((xTarget-x)/(yTarget-y))*180/M_PI;
     float setpoint = angle + ((yTarget-y) > 0 ? 0 : 180);
-    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 5) {
+    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 25) {
       e = setpoint-fmod(orientation,360);
       d = (e-eRec)/dt;
       i += e*dt;
       eRec = e;
-      leftGroup.setVelocity(70 + e*kp + d*kd + i*ki,pct);
-      rightGroup.setVelocity(70 - (e*kp + d*kd + i*ki),pct);
+      leftGroup.setVelocity(40 - (e*kp + d*kd + i*ki),pct);
+      rightGroup.setVelocity(40 + (e*kp + d*kd + i*ki),pct);
       leftGroup.spin(fwd);
       rightGroup.spin(fwd);
+      Controller1.Screen.clearLine();
+      Controller1.Screen.print("%.1f, %.1f, %.1f", x, y, pow(xTarget-x,2) + pow(yTarget-y,2));
       wait(dt,sec);
     }
   }
@@ -545,18 +550,14 @@ void programmingSkills(void) {
   straight(8);
   toggleWings();
   arc(50,40,right);
-  arc(0,-80,right);
+  turnToHeading(0);
+  straight(40);
+  turnToHeading(315);
   toggleWings();
-  arc(50,40,left);
-  slam(reverse);
-
-  straight(5);
+  arc(70,-45,right);
+  straight(10);
   toggleWings();
-  straight(22);
-  turnToHeading(120);
-  toggleWings();
-  arc(20, 140, left);
-  slam(reverse);
+  straight(50);
   /*
   turnToHeading(315);
   Intake.spin(reverse);
@@ -590,18 +591,18 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  orientation = 90;
+  orientation = 0;
   x = 35;
   y = 11;
   odom = vex::task(runOdom);
   followPath({
-    {33,35},
     {48,70},
     {36,104},
     {40,130},
     {108,130}
   });
 }
+/*
 std::string progAlignment[3][3] = {
   {"Safe Opposite Side", "Cool Opposite Side", ""},
   {"Safe Same Side", "Cool Same Side", ""},
@@ -639,7 +640,7 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
   Brain.Screen.drawRectangle(x, y, w, h);
   Brain.Screen.printAt(x+(w/2), y+(h/2), text);
 }
-
+*/
 void usercontrol(void) {
   Intake.setVelocity(100,pct);
   int deadband = 5;
@@ -651,7 +652,7 @@ void usercontrol(void) {
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
   Controller1.ButtonLeft.pressed(cataMatchLoad);
-  //odom = vex::task(runOdom);
+  odom = vex::task(runOdom);
   while (true) {
     //tank drive
 
@@ -664,6 +665,9 @@ void usercontrol(void) {
     //split drive
     int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
     int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
+
+    //cycle based on robot speed
+    //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
 
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
@@ -710,9 +714,6 @@ void usercontrol(void) {
     // Spin all drivetrain motors in the forward direction.
     leftGroup.spin(forward);
     rightGroup.spin(forward);
-    //test odom
-    Controller1.Screen.newLine();
-    Controller1.Screen.print("o: %.1f i: %.1f x: %.1f y: %.1f", orientationHeading, inertialSensor.rotation(), x, y);
     wait(0.025,sec);
   }
 }
@@ -733,21 +734,24 @@ void driverSkills(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+  typedef void (*callback)();
+  callback progs[6] = {oppositeSide, oppositeSideElim, AWPSameSide, sameSide, programmingSkills, testing};
+  std::string progNames[6] = {"Safe Opposite", "Cool Opposite", "Safe Same", "Cool Same", "Skills", "test"};
   //Brain.Screen.render(true,false); //set VSync (vertical sync) on, automatic refresh to off
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(programmingSkills);
+  //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  //Competition.autonomous(testing);
+  Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  //Competition.drivercontrol(usercontrol);
-  Competition.drivercontrol(driverSkills);
+  Competition.drivercontrol(usercontrol);
+  //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
-    
+    /*
     Brain.Screen.clearScreen(); //clears the back buffer for drawing, default clear color is black
         autonSelection(); //draws our grid to the back buffer
         Brain.Screen.render(); //flips the back buffer to the screen all at once, preventing flickering
@@ -755,40 +759,19 @@ int main() {
             while (Brain.Screen.pressing()) { //wait until the user stops touching the screen
                 Brain.Screen.clearScreen(); //while waiting, maintain the grid and draw
                 autonSelection();                //a touch indicator around the user's finger
+                draw_touch();
                 Brain.Screen.render();
             }
             wait(1, sec); //wait a second for their hand to get a little further away
             Competition.autonomous(progs[Brain.Screen.yPosition()/80][Brain.Screen.xPosition()/160]);
         } else {
             wait(.1, sec);
-        }
-        
-    /*if(Controller1.ButtonL1.pressing()) {
-      Controller1.rumble("..-");
-      Competition.autonomous(AWPSameSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("safe same side");
-    } else if (Controller1.ButtonL2.pressing()) {
-      Controller1.rumble("..---");
-      Competition.autonomous(sameSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("cool same side");
-    } else if (Controller1.ButtonR1.pressing()) {
-      Controller1.rumble("---");
-      Competition.autonomous(oppositeSide);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("safe opposite side");
-    } else if (Controller1.ButtonR2.pressing()) {
-      Controller1.rumble("-----");
-      Competition.autonomous(oppositeSideElim);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("cool opposite side");
-    } else if (Controller1.ButtonUp.pressing()) {
-      Controller1.rumble(".....");
-      Competition.autonomous(programmingSkills);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("prog skills");
-    }*/
+        }*/
+    int progNumber = (int)(potentiometer.angle(deg)/40);
+    Competition.autonomous(progs[progNumber]);
+    if(progNumber==4) Competition.drivercontrol(driverSkills);
+    Brain.Screen.clearScreen();
+    Brain.Screen.printAt(240,120,progNames[progNumber].c_str());
     wait(100, msec);
   }
 }
