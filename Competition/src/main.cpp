@@ -16,6 +16,7 @@
 #include <cstring>
 #include <string.h>
 #include "vex_motor.h"
+#include <cmath>
 
 using namespace vex;
 
@@ -203,9 +204,9 @@ void odomUpdate() {
   } else {
     float radius = (leftPos/((leftPos-rightPos)/drivetrainWidth)) - drivetrainWidth/2;
     //x += -radius * (sinf(-(radOrientation-M_PI/2)) - sinf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
-    x += sinf(radOrientation) * 2sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
+    x += sinf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
     //y += radius * (cosf(-(radOrientation-M_PI/2)) - cosf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
-    x += cosf(radOrientation) * 2sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
+    x += cosf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
   }
   prevLeftRotation = leftGroup.position(deg);
   prevRightRotation = rightGroup.position(deg);
@@ -213,8 +214,8 @@ void odomUpdate() {
 int runOdom() {
   while(true) {
     odomUpdate();
-    //Controller1.Screen.newLine();
-    //Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
+    // Controller1.Screen.newLine();
+    // Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
     wait(50,msec);
   }
 }
@@ -329,6 +330,130 @@ bool followPath(const std::vector<std::vector<int>>& points) {
   rightGroup.stop();
   return true;
 }
+struct Vector2d {
+    double x, y;
+};
+
+struct Robot {
+  double left_motor_speed;
+  double right_motor_speed;
+};
+
+class BezierSpline {
+public:
+    BezierSpline(const Vector2d& p0, const Vector2d& p1, const Vector2d& p2)
+        : P0(p0), P1(p1), P2(p2) {}
+
+    Vector2d calculatePoint(double t) const {
+        Vector2d result;
+        result.x = (1 - t) * (1 - t) * P0.x + 2 * (1 - t) * t * P1.x + t * t * P2.x;
+        result.y = (1 - t) * (1 - t) * P0.y + 2 * (1 - t) * t * P1.y + t * t * P2.y;
+        return result;
+    }
+
+    Vector2d calculateTangent(double t) const {
+        Vector2d tangent;
+        // tangent.x = 2 * (1 - t) * (P1.x - P0.x) + 2 * t * (P2.x - P1.x);
+        // tangent.y = 2 * (1 - t) * (P1.y - P0.y) + 2 * t * (P2.y - P1.y);
+        tangent.x = -2 * (1 - t) * P0.x + 2 * (1 - 2 * t) * P1.x + 2 * t * P2.x;
+        tangent.y = -2 * (1 - t) * P0.y + 2 * (1 - 2 * t) * P1.y + 2 * t * P2.y;
+        return tangent;
+    }
+
+private:
+    Vector2d P0, P1, P2;
+};
+
+class RobotController {
+  public:
+    RobotController(Robot& robot) : robot(robot) {}
+
+    void moveRobot(const Vector2d& middle_position, const Vector2d& target_position) {
+      double max_speed = 50.0;
+      double time_step = 0.1;
+
+      Vector2d current_position = getCurrentPosition();
+      BezierSpline spline(current_position, middle_position, target_position);
+
+      Vector2d ogtan = spline.calculateTangent(0);
+      turnToHeading(atan2(ogtan.y, ogtan.x) / M_PI * 180);
+      leftGroup.spin(fwd);
+      // leftGroup.setVelocity(20, pct);
+      rightGroup.spin(fwd);
+      // rightGroup.setVelocity(20, pct);
+        double t = 0.0;
+        while (t <= 1.0) {
+          
+            Vector2d desired_position = spline.calculatePoint(t);
+            Vector2d tangent = spline.calculateTangent(t);
+            
+
+            // Simple control logic: adjust left and right motor speeds based on tangent
+            double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
+            // Brain.Screen.print(angle);
+            // Brain.Screen.newLine();
+            // Brain.Screen.print(orientationHeading);
+            angle = angle / M_PI * 180; //convert to degrees
+            double angle_difference = fmod(orientationHeading - angle + 3600, 360);
+
+            double distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
+            double time_diff = distance / 27.5;
+            //1 pct speed diff in 0.1 seconds = 0.3 degrees change
+            double speed_difference = angle_difference / 253.0 * 50 / time_diff;
+
+            Controller1.Screen.newLine();
+            Controller1.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
+
+            double left_speed = max_speed - speed_difference;
+            double right_speed = max_speed + speed_difference;
+
+            // Send motor commands to the robot
+            robot.left_motor_speed = left_speed;
+            robot.right_motor_speed = right_speed;
+            // Brain.Screen.print("left: ");
+            // Brain.Screen.print(left_speed);
+            // Brain.Screen.print("right: ");
+            // Brain.Screen.print(right_speed);
+
+          // Brain.Screen.newLine();
+
+          Brain.Screen.newLine();
+            Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
+
+            // Move forward in time
+            t += time_step;
+
+            // Simulate robot movement (you may replace this with your actual motion control logic)
+            // simulateRobotMovement(time_step);
+            wait(time_diff, sec);
+        }
+
+        // Stop the robot when the path is complete
+        robot.left_motor_speed = 0.0;
+        robot.right_motor_speed = 0.0;
+        leftGroup.stop();
+        rightGroup.stop();
+    }
+
+  private: 
+    Robot& robot;
+
+    Vector2d getCurrentPosition() const {
+        // Replace this with your actual logic to get the current robot position
+        // For simplicity, assume the robot starts at the origin
+        return { x, y };
+    }
+
+    void simulateRobotMovement(double time_step) const {
+        // Replace this with your actual motion control logic or robot simulation
+        // For simplicity, assume a simple linear movement for the example
+        leftGroup.setVelocity(robot.left_motor_speed, pct);
+        leftGroup.spin(fwd);
+        rightGroup.setVelocity(robot.right_motor_speed, pct);
+        rightGroup.spin(fwd);
+    }
+};
+
 //In case intake requires the robot to rock back and forth to outtake
 int shake() {
   for(int i=0; i<3; i++) {
@@ -337,6 +462,7 @@ int shake() {
   }
   return 1;
 }
+
 void pre_auton(void) {
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
@@ -591,16 +717,32 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  orientation = 0;
-  x = 35;
-  y = 11;
+  Brain.Screen.print("krishsux");
   odom = vex::task(runOdom);
-  followPath({
-    {48,70},
-    {36,104},
-    {40,130},
-    {108,130}
-  });
+  orientation = 0;
+  x = 0;
+  y = 0;
+  
+  // followPath({
+  //   {48,70},
+  //   {36,104},
+  //   {40,130},
+  //   {108,130}
+  // });
+  Robot myRobot{ 0.0, 0.0 };
+    RobotController controller(myRobot);
+
+    // Move the robot along a Bezier spline to the target position
+    controller.moveRobot({ 18, 6 }, { 12, 18 });
+    //left 0, right 10 for 1 second = 21 degrees
+  // leftGroup.spin(fwd);
+  // rightGroup.spin(fwd);
+  // leftGroup.setVelocity(90, pct);
+  // rightGroup.setVelocity(100, pct);
+  // wait(1, sec);
+  // leftGroup.stop();
+  // rightGroup.stop();
+
 }
 /*
 std::string progAlignment[3][3] = {
@@ -743,7 +885,7 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
-  //Competition.autonomous(sameSide);
+  // Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
   Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
@@ -767,11 +909,11 @@ int main() {
         } else {
             wait(.1, sec);
         }*/
-    int progNumber = (int)(potentiometer.angle(deg)/40);
-    Competition.autonomous(progs[progNumber]);
-    if(progNumber==4) Competition.drivercontrol(driverSkills);
-    Brain.Screen.clearScreen();
-    Brain.Screen.printAt(240,120,progNames[progNumber].c_str());
+    // int progNumber = (int)(potentiometer.angle(deg)/40);
+    // Competition.autonomous(progs[progNumber]);
+    // if(progNumber==4) Competition.drivercontrol(driverSkills);
+    // Brain.Screen.clearScreen();
+    // Brain.Screen.printAt(240,120,progNames[progNumber].c_str());
     wait(100, msec);
   }
 }
