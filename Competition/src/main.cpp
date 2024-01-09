@@ -173,7 +173,7 @@ bool turnToHeading(float heading) {
   float closestPath = 0;
   if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
     closestPath = clockwiseRotation;
-    if(fabs(clockwiseRotation-360) < (closestPath)) closestPath-=360;
+    if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
   } else {
     closestPath = clockwiseRotation+360;
   }
@@ -337,6 +337,8 @@ struct Vector2d {
 struct Robot {
   double left_motor_speed;
   double right_motor_speed;
+  double calcLinearSpeed(float pct) {
+  }
 };
 
 class BezierSpline {
@@ -359,6 +361,14 @@ public:
         tangent.y = -2 * (1 - t) * P0.y + 2 * (1 - 2 * t) * P1.y + 2 * t * P2.y;
         return tangent;
     }
+    float approxLength(int intervals) {
+      float length = 0;
+      for(float t=0; t<1; t+=(1.0/intervals)) {
+        Vector2d currentPos = calculatePoint(t);
+        Vector2d nextPos = calculatePoint(t+(1.0/intervals));
+        length += sqrt(pow(nextPos.x - currentPos.x,2) + pow(nextPos.y - currentPos.y,2));
+      }
+    }
 
 private:
     Vector2d P0, P1, P2;
@@ -370,22 +380,28 @@ class RobotController {
 
     void moveRobot(const Vector2d& middle_position, const Vector2d& target_position) {
       double max_speed = 50.0;
-      double time_step = 0.1;
+      double lookAhead = 12.0;
 
       Vector2d current_position = getCurrentPosition();
       BezierSpline spline(current_position, middle_position, target_position);
 
       Vector2d ogtan = spline.calculateTangent(0);
-      turnToHeading(atan2(ogtan.y, ogtan.x) / M_PI * 180);
+      turnToHeading(-atan2(ogtan.y, ogtan.x) / M_PI * 180);
       leftGroup.spin(fwd);
       // leftGroup.setVelocity(20, pct);
       rightGroup.spin(fwd);
       // rightGroup.setVelocity(20, pct);
-        double t = 0.0;
-        while (t <= 1.0) {
+      //splinePos is the percent of the track the robot has completed
+      float kp = 0.5;
+      float ki = 0.05;
+      float kd = 0.1;
+      double distance = sqrt((target_position.x-x)*(target_position.x-x) + (target_position.y-y)*(target_position.y-y));
+      double splineLength = spline.approxLength(25);
+        double splinePos = 0.0;
+        while (splinePos <= 1.0) {
           
-            Vector2d desired_position = spline.calculatePoint(t);
-            Vector2d tangent = spline.calculateTangent(t);
+            Vector2d desired_position = spline.calculatePoint(splinePos+(lookAhead/splineLength));
+            Vector2d tangent = spline.calculateTangent(splinePos+(lookAhead/splineLength));
             
 
             // Simple control logic: adjust left and right motor speeds based on tangent
@@ -394,10 +410,10 @@ class RobotController {
             // Brain.Screen.newLine();
             // Brain.Screen.print(orientationHeading);
             angle = angle / M_PI * 180; //convert to degrees
-            double angle_difference = fmod(orientationHeading - angle + 3600, 360);
+            double angle_difference = fmod(-orientationHeading - angle, 360);
 
             double distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
-            double time_diff = distance / 27.5;
+            //double time_diff = distance / 27.5;
             //1 pct speed diff in 0.1 seconds = 0.3 degrees change
             double speed_difference = angle_difference / 253.0 * 50 / time_diff;
 
