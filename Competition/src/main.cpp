@@ -338,6 +338,7 @@ struct Robot {
   double left_motor_speed;
   double right_motor_speed;
   double calcLinearSpeed(float pct) {
+    return 55;
   }
 };
 
@@ -363,11 +364,12 @@ public:
     }
     float approxLength(int intervals) {
       float length = 0;
-      for(float t=0; t<1; t+=(1.0/intervals)) {
-        Vector2d currentPos = calculatePoint(t);
-        Vector2d nextPos = calculatePoint(t+(1.0/intervals));
+      for(float t=0; t<intervals; t++) {
+        Vector2d currentPos = calculatePoint(1.0/intervals*t);
+        Vector2d nextPos = calculatePoint((1.0/intervals)*(t+1));
         length += sqrt(pow(nextPos.x - currentPos.x,2) + pow(nextPos.y - currentPos.y,2));
       }
+      return length;
     }
 
 private:
@@ -392,56 +394,72 @@ class RobotController {
       rightGroup.spin(fwd);
       // rightGroup.setVelocity(20, pct);
       //splinePos is the percent of the track the robot has completed
-      float kp = 0.5;
-      float ki = 0.05;
-      float kd = 0.1;
+      float kp = 0.05;
+      float ki = 0.005;
+      float kd = 0.01;
+      float e = 0;
+      float d = 0;
+      float i = 0;
+      float eRec = 0;
+      Controller1.Screen.print("DOES THIS WORK");
       double distance = sqrt((target_position.x-x)*(target_position.x-x) + (target_position.y-y)*(target_position.y-y));
-      double splineLength = spline.approxLength(25);
+      Controller1.Screen.print("STILL WORKING");
+      double splineLength = spline.approxLength(15);
+      Controller1.Screen.print(splineLength);
+      double timeStep = 0.1;
         double splinePos = 0.0;
-        while (splinePos <= 1.0) {
+        while (distance > 5) {
           
-            Vector2d desired_position = spline.calculatePoint(splinePos+(lookAhead/splineLength));
-            Vector2d tangent = spline.calculateTangent(splinePos+(lookAhead/splineLength));
-            
+          Vector2d desired_position = spline.calculatePoint(splinePos+(lookAhead/splineLength));
+          Vector2d tangent = spline.calculateTangent(splinePos+(lookAhead/splineLength));
+          
 
-            // Simple control logic: adjust left and right motor speeds based on tangent
-            double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
-            // Brain.Screen.print(angle);
-            // Brain.Screen.newLine();
-            // Brain.Screen.print(orientationHeading);
-            angle = angle / M_PI * 180; //convert to degrees
-            double angle_difference = fmod(-orientationHeading - angle, 360);
+          // Simple control logic: adjust left and right motor speeds based on tangent
+          double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
+          // Brain.Screen.print(angle);
+          // Brain.Screen.newLine();
+          // Brain.Screen.print(orientationHeading);
+          angle = angle / M_PI * 180; //convert to degrees
+          double angle_difference = fmod(-orientationHeading - angle, 360);
+          if(fabs(angle_difference) > 180) angle_difference = (360-angle_difference*(angle_difference>0)? 1 : -1);
+          e = angle_difference;
+          d = (e-eRec)/timeStep;
+          i += (e*timeStep);
+          eRec = e;
+          distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
+          //float speed = 2 * sinf((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth/2) * (rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60/((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth) + drivetrainWidth/2);
+        
+          //1 pct speed diff in 0.1 seconds = 0.3 degrees change
+          double speed_difference = ki*i + kd*d + kp*e;
 
-            double distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
-            //double time_diff = distance / 27.5;
-            //1 pct speed diff in 0.1 seconds = 0.3 degrees change
-            double speed_difference = angle_difference / 253.0 * 50 / time_diff;
+          Controller1.Screen.clearLine();
+          //Controller1.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
+          Controller1.Screen.print(angle_difference);
+          double left_speed = max_speed - speed_difference;
+          double right_speed = max_speed + speed_difference;
 
-            Controller1.Screen.newLine();
-            Controller1.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
-
-            double left_speed = max_speed - speed_difference;
-            double right_speed = max_speed + speed_difference;
-
-            // Send motor commands to the robot
-            robot.left_motor_speed = left_speed;
-            robot.right_motor_speed = right_speed;
-            // Brain.Screen.print("left: ");
-            // Brain.Screen.print(left_speed);
-            // Brain.Screen.print("right: ");
-            // Brain.Screen.print(right_speed);
+          // Send motor commands to the robot
+          robot.left_motor_speed = left_speed;
+          robot.right_motor_speed = right_speed;
+          // Brain.Screen.print("left: ");
+          // Brain.Screen.print(left_speed);
+          // Brain.Screen.print("right: ");
+          // Brain.Screen.print(right_speed);
 
           // Brain.Screen.newLine();
 
-          Brain.Screen.newLine();
-            Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
+          //Brain.Screen.newLine();
+          //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
 
-            // Move forward in time
-            t += time_step;
+          // Move forward in time
+          //splinePos += (speed*timeStep)/splineLength;
 
-            // Simulate robot movement (you may replace this with your actual motion control logic)
-            // simulateRobotMovement(time_step);
-            wait(time_diff, sec);
+          // Simulate robot movement (you may replace this with your actual motion control logic)
+          leftGroup.setVelocity(robot.left_motor_speed, pct);
+          leftGroup.spin(fwd);
+          rightGroup.setVelocity(robot.right_motor_speed, pct);
+          rightGroup.spin(fwd);
+          wait(timeStep, sec);
         }
 
         // Stop the robot when the path is complete
@@ -460,14 +478,6 @@ class RobotController {
         return { x, y };
     }
 
-    void simulateRobotMovement(double time_step) const {
-        // Replace this with your actual motion control logic or robot simulation
-        // For simplicity, assume a simple linear movement for the example
-        leftGroup.setVelocity(robot.left_motor_speed, pct);
-        leftGroup.spin(fwd);
-        rightGroup.setVelocity(robot.right_motor_speed, pct);
-        rightGroup.spin(fwd);
-    }
 };
 
 //In case intake requires the robot to rock back and forth to outtake
@@ -733,7 +743,6 @@ void programmingSkills(void) {
   */
 }
 void testing(void) {
-  Brain.Screen.print("krishsux");
   odom = vex::task(runOdom);
   orientation = 0;
   x = 0;
@@ -899,13 +908,13 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  //Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
   // Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
   Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  Competition.drivercontrol(usercontrol);
+  //Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
