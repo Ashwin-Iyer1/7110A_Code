@@ -64,9 +64,10 @@ void bringCataDown(float angle) {
       stopCata();
 }
 int bringCataDown() {
-  bringCataDown(270);
+  bringCataDown(50);
   return 1;
 }
+
 void cataMatchLoad() {
   bringCataDown(160);
 }
@@ -82,6 +83,7 @@ void toggleCata() {
     catatoggle = true;
   } else {
     stopCata();
+    bringCataDown();
     catatoggle = false;
   }
 }
@@ -90,15 +92,55 @@ void toggleWings() {
 }
 void toggleBlocker() {
   Blocker.set(!Blocker.value());
-  if(Blocker.value()) {
-    BlockerLEDS -> gradient(0xFF0000, 0xFFFFFF, 0, 0, false, true);
-    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
-  } else {
-    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
-  }
+  
 }
 
+int handleLEDs() {
+  bool prevBlocker = Blocker.value();
+  bool idle = false;
+  while(true) {
+    if(Blocker.value() && !prevBlocker) {
+        BlockerLEDS->set_all(0x000000);
+        BlockerLEDS -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
+        BlockerLEDS -> cycle(**BlockerLEDS, 25);
+        Top->set_all(0x000000);
+        Top -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
+        Top -> cycle(**BlockerLEDS, 25);
+        Under1->set_all(0xFF0000);
+        Under2->set_all(0xFF0000);
+        idle = false;
+    } else if(catatoggle){
+      int cataprogress = (int)rotationSensor.position(deg)*2.5;
+      BlockerLEDS->set_all(cataprogress*65793);
+      Top->set_all(cataprogress*65793);
+      Under1->set_all(cataprogress*65793);
+      Under2->set_all(cataprogress*65793);
+      idle = false;
+    } else if(!idle && !Blocker.value()){
+      BlockerLEDS->set_all(0x000000);
+      Top->set_all(0x000000);
+      Under1->set_all(0x000000);
+      Under2->set_all(0x000000);
+      BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      BlockerLEDS -> cycle(**BlockerLEDS, 10);
+
+      Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      Top -> cycle(**Top, 10);
+
+
+
+      Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      Under1 -> cycle(**Under1, 10);
+
+
+      Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      Under2 -> cycle(**Under2, 10);
+      idle = true;
+    }
+    prevBlocker = Blocker.value();
+    wait(50,msec);
+  }
+}
 float gearRatio = 36.0/84.0;
 float wheelDiameter = 4.125;
 float wheelRadius = wheelDiameter/2;
@@ -352,14 +394,11 @@ int shake() {
 }
 void pre_auton(void) {
   sylib::initialize();
-  BlockerLEDS = new sylib::Addrled(22,8,27);
-  Under1 = new sylib::Addrled(22,7,14);
-  Under2 = new sylib::Addrled(22,6,13);
-  Top = new sylib::Addrled(22,5,23);
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
+  rotationSensor.resetPosition();
   inertialSensor.resetHeading();
   Catapult.setStopping(brakeType::coast);
   Catapult.setVelocity(100,pct);
@@ -371,6 +410,26 @@ void brakeAll() {
   leftGroup.setStopping(brakeType::brake);
   rightGroup.setStopping(brakeType::brake);
 }
+/*
+vex::task LED;
+int LEDRainbow() {
+    std::uint32_t clock = sylib::millis();
+    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS -> cycle(Top -> buffer, 10);
+
+    Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Top -> cycle(Top -> buffer, 10);
+
+    Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under1 -> cycle(Under1 -> buffer, 10);
+
+    Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under2 -> cycle(Under2 -> buffer, 10);
+  while (true) {
+    sylib::delay_until(&clock, 10);
+  }
+  return 1;
+}*/
 void oppositeSide(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
@@ -452,6 +511,7 @@ void oppositeSideElim(void) {
   straight(-30);
 }
 void sameSide(void) {
+  //vex::task run(LEDRainbow);
   //vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
@@ -660,18 +720,7 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 */
 void usercontrol(void) {
-
-    Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Top -> cycle(Top -> buffer, 10);
-
-    Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under1 -> cycle(Under1 -> buffer, 10);
-
-    Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under2 -> cycle(Under2 -> buffer, 10);
-
-    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    BlockerLEDS -> cycle(BlockerLEDS -> buffer, 10);
+  
     std::uint32_t clock = sylib::millis();
 
   Intake.setVelocity(100,pct);
@@ -683,8 +732,17 @@ void usercontrol(void) {
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
-  Controller1.ButtonLeft.pressed(cataMatchLoad);
+  // Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
+  auto block = sylib::Addrled(22,8,40);
+  BlockerLEDS = &block;
+  auto und1 = sylib::Addrled(22,7,14);
+  Under1 = &und1;
+  auto und2 = sylib::Addrled(22,6,13);
+  Under2 = &und2;
+  auto top = sylib::Addrled(22,5,23);
+  Top = &top;
+  vex::task leds(handleLEDs);
   while (true) {
     //tank drive
     sylib::delay_until(&clock, 10);
@@ -775,9 +833,9 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSideElim);
-  //Competition.autonomous(sameSide);
+  Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  Competition.autonomous(testing);
+  // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
