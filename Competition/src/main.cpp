@@ -15,6 +15,7 @@
 #include "stdarg.h"
 #include <cstring>
 #include <string.h>
+#include "sylib/sylib.hpp"
 #include "vex_motor.h"
 #include <cmath>
 
@@ -45,6 +46,13 @@ pot potentiometer = pot(Brain.ThreeWirePort.C);
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
+
+// sylib::Addrled BlockerLEDS;
+// sylib::Addrled Under1;
+// sylib::Addrled Under2;
+// sylib::Addrled Top;
+
+
 bool catatoggle = false;
 void stopCata() {
     Catapult.stop();
@@ -83,6 +91,13 @@ void toggleWings() {
 }
 void toggleBlocker() {
   Blocker.set(!Blocker.value());
+  if(Blocker.value()) {
+    // BlockerLEDS.gradient(0xFF0000, 0xFFFFFF, 0, 0, false, true);
+    // BlockerLEDS.cycle(*BlockerLEDS, 10);
+  } else {
+    // BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    // BlockerLEDS.cycle(*BlockerLEDS, 10);
+  }
 }
 
 float gearRatio = 36.0/84.0;
@@ -503,6 +518,7 @@ int shake() {
 }
 
 void pre_auton(void) {
+  sylib::initialize();
   inertialSensor.calibrate();
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
@@ -517,6 +533,33 @@ void pre_auton(void) {
 void brakeAll() {
   leftGroup.setStopping(brakeType::brake);
   rightGroup.setStopping(brakeType::brake);
+}
+vex::task LED;
+int LEDRainbow() {
+  auto BlockerLEDS = sylib::Addrled(22,8,27);
+  auto Under1 = sylib::Addrled(22,7,14);
+  auto Under2 = sylib::Addrled(22,6,13);
+  auto Top = sylib::Addrled(22,5,23);
+  
+    std::uint32_t clock = sylib::millis();
+  BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS.cycle(*Top, 10);
+
+    Top.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Top.cycle(*Top, 10);
+
+
+
+    Under1.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under1.cycle(*Under1, 10);
+
+
+    Under2.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under2.cycle(*Under2, 10);
+  while (true) {
+    sylib::delay_until(&clock, 10);
+  }
+  return 1;
 }
 void oppositeSide(void) {
   //start close to left of tile touching wall
@@ -599,6 +642,7 @@ void oppositeSideElim(void) {
   straight(-30);
 }
 void sameSide(void) {
+  vex::task run(LEDRainbow);
   //vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
@@ -822,6 +866,8 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 */
 void usercontrol(void) {
+
+
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
@@ -831,11 +877,41 @@ void usercontrol(void) {
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
-  Controller1.ButtonLeft.pressed(cataMatchLoad);
+  // Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
-  while (true) {
-    //tank drive
+  auto BlockerLEDS = sylib::Addrled(22,8,27);
+  auto Under1 = sylib::Addrled(22,7,14);
+  auto Under2 = sylib::Addrled(22,6,13);
+  auto Top = sylib::Addrled(22,5,23);
+  
+    std::uint32_t clock = sylib::millis();
 
+  while (true) {
+    if(Controller1.ButtonRight.pressing()) {
+    BlockerLEDS.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    BlockerLEDS.cycle(*Top, 10);
+
+    Top.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Top.cycle(*Top, 10);
+
+
+
+    Under1.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under1.cycle(*Under1, 10);
+
+
+    Under2.gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under2.cycle(*Under2, 10);
+
+  }
+  else if(Controller1.ButtonLeft.pressing()){
+    Top.set_all(0xFF0000);
+    Under1.set_all(0xFF0000);
+    Under2.set_all(0xFF0000);
+    BlockerLEDS.set_all(0xFF0000);
+  }
+    //tank drive
+    sylib::delay_until(&clock, 10);
     // Get the velocity percentage of the left motor. (Axis3)
     //int leftMotorSpeed = intakeMode ? Controller1.Axis3.position() : (-Controller1.Axis2.position());
     // Get the velocity percentage of the right motor. (Axis2)
@@ -925,7 +1001,7 @@ int main() {
   //Competition.autonomous(oppositeSideElim);
   // Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  Competition.autonomous(testing);
+  // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
   //Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
