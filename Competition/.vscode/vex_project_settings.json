@@ -1,19 +1,22 @@
 {
-	"extension": {
-		"version": "0.5.0",
-		"json": 2
-	},
 	"project": {
 		"name": "Competition",
-		"description": "",
-		"creationDate": "10/3/2023, 8:15:04 AM",
+		"slot": 8,
+		"description": "Competition Template V5 C++ Project",
 		"platform": "V5",
+		"creationDate": "Fri, 29 Dec 2023 23:41:23 GMT",
 		"language": "cpp",
+<<<<<<< HEAD
+=======
 		"slot": 7,
+>>>>>>> main
 		"sdkVersion": "V5_20220726_10_00_00",
 		"cpp": {
-			"includePath": [],
-			"printf_float": true
+			"includePath": []
 		}
+	},
+	"extension": {
+		"version": "0.5.0",
+		"json": 1
 	}
 }
