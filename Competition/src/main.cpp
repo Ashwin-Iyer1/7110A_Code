@@ -349,9 +349,19 @@ public:
 
     Vector2d calculatePoint(double t) const {
         Vector2d result;
+        if(t<0) {
+          result.x = P0.x;
+          result.y = P0.y;
+          return result;
+        }
+        if(t>1) {
+          result.x = P2.x;
+          result.y = P2.y;
+          return result;
+        }
         result.x = (1 - t) * (1 - t) * P0.x + 2 * (1 - t) * t * P1.x + t * t * P2.x;
         result.y = (1 - t) * (1 - t) * P0.y + 2 * (1 - t) * t * P1.y + t * t * P2.y;
-        return result;
+        return result; 
     }
 
     Vector2d calculateTangent(double t) const {
@@ -362,8 +372,8 @@ public:
         tangent.y = -2 * (1 - t) * P0.y + 2 * (1 - 2 * t) * P1.y + 2 * t * P2.y;
         return tangent;
     }
-    float approxLength(int intervals) {
-      float length = 0;
+    double approxLength(int intervals) {
+      double length = 0;
       for(float t=0; t<intervals; t++) {
         Vector2d currentPos = calculatePoint(1.0/intervals*t);
         Vector2d nextPos = calculatePoint((1.0/intervals)*(t+1));
@@ -404,16 +414,18 @@ class RobotController {
       Controller1.Screen.print("DOES THIS WORK");
       double distance = sqrt((target_position.x-x)*(target_position.x-x) + (target_position.y-y)*(target_position.y-y));
       Controller1.Screen.print("STILL WORKING");
-      double splineLength = spline.approxLength(15);
+      wait(0.5,sec);
+      double splineLength = spline.approxLength(10);
+      Controller1.Screen.clearLine();
       Controller1.Screen.print(splineLength);
+      wait(0.5,sec);
       double timeStep = 0.1;
         double splinePos = 0.0;
-        while (distance > 5) {
+        while (splinePos < 1-(lookAhead/splineLength)) {
           
           Vector2d desired_position = spline.calculatePoint(splinePos+(lookAhead/splineLength));
           Vector2d tangent = spline.calculateTangent(splinePos+(lookAhead/splineLength));
           
-
           // Simple control logic: adjust left and right motor speeds based on tangent
           double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
           // Brain.Screen.print(angle);
@@ -426,8 +438,8 @@ class RobotController {
           d = (e-eRec)/timeStep;
           i += (e*timeStep);
           eRec = e;
-          distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
-          //float speed = 2 * sinf((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth/2) * (rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60/((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth) + drivetrainWidth/2);
+          //distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
+          float speed = 2 * sinf((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth/2) * (rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60/((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth) + drivetrainWidth/2);
         
           //1 pct speed diff in 0.1 seconds = 0.3 degrees change
           double speed_difference = ki*i + kd*d + kp*e;
@@ -452,7 +464,7 @@ class RobotController {
           //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
 
           // Move forward in time
-          //splinePos += (speed*timeStep)/splineLength;
+          splinePos += (speed*timeStep)/splineLength;
 
           // Simulate robot movement (you may replace this with your actual motion control logic)
           leftGroup.setVelocity(robot.left_motor_speed, pct);
@@ -461,6 +473,7 @@ class RobotController {
           rightGroup.spin(fwd);
           wait(timeStep, sec);
         }
+        straight(lookAhead);
 
         // Stop the robot when the path is complete
         robot.left_motor_speed = 0.0;
