@@ -98,6 +98,10 @@
 		"tuple": "cpp",
 		"type_traits": "cpp",
 		"utility": "cpp",
-		"typeinfo": "cpp"
+		"typeinfo": "cpp",
+		"atomic": "cpp",
+		"cstddef": "cpp",
+		"mutex": "cpp",
+		"system_error": "cpp"
 	}
 }

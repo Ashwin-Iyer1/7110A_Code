@@ -292,6 +292,8 @@ void straight(float dist, distanceUnits units) {
   }
   leftGroup.stop();
   rightGroup.stop();
+  x+=cos(-inertialSensor.heading()+M_PI/2);
+  y+=sin(-inertialSensor.heading()+M_PI/2);
 }
 void straight(float dist, float speed) {
   leftGroup.setVelocity(speed,pct);
@@ -351,8 +353,17 @@ void arc(float radius, float angle, turnType side) {
   rightGroup.stop();
 }
 bool moveToPoint(float xPos, float yPos) {
-  turnToHeadingOdom(-atanf((xPos-x)/(yPos-y))/M_PI*180);
+  Controller1.Screen.clearLine();
+  Controller1.Screen.print("testing");
+  float heading = -atan((yPos-y)/(xPos-x))/M_PI*180 + 90;
+  if(xPos-x < 0) {
+    heading += 180;
+  }
+  turnToHeading(heading);
+  Controller1.Screen.print("we goin");
   straight(sqrtf(pow(xPos-x,2) + pow(yPos-y,2)));
+  x = xPos;
+  y = yPos;
   return true;
 }
 bool followPath(const std::vector<std::vector<int>>& points) {
@@ -863,6 +874,7 @@ void testing(void) {
 
 }
 /*
+
 std::string progAlignment[3][3] = {
   {"Safe Opposite Side", "Cool Opposite Side", ""},
   {"Safe Same Side", "Cool Same Side", ""},
@@ -1002,6 +1014,28 @@ void driverSkills(void) {
   toggleCata();
   usercontrol();
 }
+void stuff(void) {
+  std::uint32_t clock = sylib::millis();
+  auto block = sylib::Addrled(22,8,40);
+  BlockerLEDS = &block;
+  auto und1 = sylib::Addrled(22,7,14);
+  Under1 = &und1;
+  auto und2 = sylib::Addrled(22,6,13);
+  Under2 = &und2;
+  auto top = sylib::Addrled(22,5,23);
+  Top = &top;
+  moveToPoint(5, 5);
+  straight(12);
+  turnToHeading(180);
+  BlockerLEDS->set_all(0xFF0000);
+  Under1->set_all(0xFF0000);
+  Under2->set_all(0xFF0000);
+  Top->set_all(0xFF0000);
+  BlockerLEDS->turn_on();
+  Under1->turn_on();
+  Under2->turn_on();
+  Top->turn_on();
+}
 //
 // Main will set up the competition functions and callbacks.
 //
@@ -1013,13 +1047,14 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(programmingSkills);
-  //Competition.autonomous(oppositeSideElim);
-  // Competition.autonomous(sameSide);
+  //Competition.autonomous(programmingSkills);
+  //Competition.autonomous(oppositeSide);
+  Competition.autonomous(stuff);
+  //Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
   // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  //Competition.drivercontrol(usercontrol);
+  Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
