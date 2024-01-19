@@ -17,12 +17,14 @@
 		{
 			"name": "windows-gcc-x64",
 			"includePath": [
-				"${vex_sdkIncludes}"
+				"${vex_sdkIncludes}",
+				"${workspaceFolder}/include",
+				"${workspaceFolder}/src"
 			],
 			"cStandard": "${default}",
 			"cppStandard": "${default}",
-			"intelliSenseMode": "msvc-x86",
-			"compilerPath": "${vex_compilerPath}"
+			"intelliSenseMode": "windows-gcc-x64",
+			"compilerPath": "c:\\Users\\krish\\AppData\\Roaming\\Code\\User\\globalStorage\\vexrobotics.vexcode\\tools\\cpp\\toolchain_win32\\clang\\bin\\clang"
 		},
 		{
 			"name": "Mac",

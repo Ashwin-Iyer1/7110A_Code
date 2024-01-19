@@ -59,7 +59,7 @@
 	"C_Cpp_Runner.showCompilationTime": false,
 	"C_Cpp_Runner.useLinkTimeOptimization": false,
 	"C_Cpp_Runner.msvcSecureNoWarnings": false,
-	"C_Cpp.default.compilerPath": "cl.exe",
+	"C_Cpp.default.compilerPath": "c:\\Users\\krish\\AppData\\Roaming\\Code\\User\\globalStorage\\vexrobotics.vexcode\\tools\\cpp\\toolchain_win32\\clang\\bin\\clang",
 	"files.associations": {
 		"algorithm": "cpp",
 		"array": "cpp",
@@ -98,6 +98,7 @@
 		"tuple": "cpp",
 		"type_traits": "cpp",
 		"utility": "cpp",
-		"typeinfo": "cpp"
+		"typeinfo": "cpp",
+		"system_error": "cpp"
 	}
 }

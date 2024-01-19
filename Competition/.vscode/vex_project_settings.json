@@ -6,10 +6,6 @@
 		"platform": "V5",
 		"creationDate": "Fri, 29 Dec 2023 23:41:23 GMT",
 		"language": "cpp",
-<<<<<<< HEAD
-=======
-		"slot": 7,
->>>>>>> main
 		"sdkVersion": "V5_20220726_10_00_00",
 		"cpp": {
 			"includePath": []
