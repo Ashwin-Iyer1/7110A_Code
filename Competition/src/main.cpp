@@ -29,23 +29,23 @@ vex::brain       Brain;
 
 controller Controller1 = controller(primary);
 
-motor FrontLeft = motor(PORT4, ratio6_1, true);
-motor FrontRight = motor(PORT3, ratio6_1, false);
-motor BackLeft = motor(PORT2, ratio6_1, true);
+motor FrontLeft = motor(PORT1, ratio6_1, true);
+motor MidLeft = motor(PORT2, ratio6_1, true);
+motor BackLeft = motor(PORT3, ratio6_1, true);
+motor FrontRight = motor(PORT4, ratio6_1, false);
+motor MidRight = motor(PORT5, ratio6_1, false);
 motor BackRight = motor(PORT6, ratio6_1, false);
-motor TopLeft = motor(PORT12, ratio6_1, false);
-motor TopRight = motor(PORT11, ratio6_1, true);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
-inertial inertialSensor = inertial(PORT5);
+inertial inertialSensor = inertial(PORT10);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation rotationSensor = rotation(PORT1);
-pot potentiometer = pot(Brain.ThreeWirePort.C);
+pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
 
-motor_group leftGroup = motor_group(FrontLeft, BackLeft, TopLeft);
-motor_group rightGroup = motor_group(FrontRight, BackRight, TopRight);
+motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
+motor_group rightGroup = motor_group(FrontRight, BackRight, MidRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
 
 sylib::Addrled* BlockerLEDS;
@@ -54,37 +54,29 @@ sylib::Addrled* Under2;
 sylib::Addrled* Top;
 
 bool catatoggle = false;
+bool hang = !pto.value();
 void stopCata() {
     Catapult.stop();
 }
-void bringCataDown(float angle) {
-  while (rotationSensor.position(deg) < angle) {
-        Catapult.spin(fwd);
-        wait(20, msec);
-      }
-      stopCata();
-}
-int bringCataDown() {
-  bringCataDown(50);
-  return 1;
-}
 
 void cataMatchLoad() {
-  bringCataDown(160);
 }
 int fullCataCycle() {
-  Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
-  bringCataDown();
-  stopCata();
+  if(!hang){
+    Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+    stopCata();
+  }
   return 1;
 }
 void toggleCata() {
-  if(!catatoggle) {
-    Catapult.spin(fwd,100,pct);
-    catatoggle = true;
-  } else {
-    stopCata();
-    catatoggle = false;
+  if(!hang) {
+    if(!catatoggle) {
+      Catapult.spin(fwd,100,pct);
+      catatoggle = true;
+    } else {
+      stopCata();
+      catatoggle = false;
+    }
   }
 }
 void toggleWings() {
@@ -93,6 +85,10 @@ void toggleWings() {
 void toggleBlocker() {
   Blocker.set(!Blocker.value());
   
+}
+void togglePTO() {
+  pto.set(!pto.value());
+  hang = !hang;
 }
 
 int handleLEDs() {
@@ -141,7 +137,7 @@ int handleLEDs() {
     wait(50,msec);
   }
 }
-float gearRatio = 36.0/84.0;
+float gearRatio = 36.0/48.0;
 float wheelDiameter = 4.125;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 6.25;
@@ -167,7 +163,7 @@ bool smartTurn(float rot) {
   float kp = 0.7;
   float kd = 0.01;
   float ki = 0;
-  float dt = 0.05;
+  float dt = 0.02;
   float t=0;
   double currAngle = inertialSensor.rotation(deg);
   double wantedAngle = currAngle + rot;
@@ -197,7 +193,7 @@ bool smartTurnOdom(float rot) {
   float kp = 0.75;
   float kd = 0.00825;
   float ki = 0;
-  float dt = 0.05;
+  float dt = 0.02;
   float t=0;
   double currAngle = orientation;
   double wantedAngle = currAngle + rot;
@@ -267,7 +263,7 @@ int runOdom() {
     odomUpdate();
     // Controller1.Screen.newLine();
     // Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
-    wait(50,msec);
+    wait(15,msec);
   }
 }
 void straight(float dist, distanceUnits units) {
@@ -1000,8 +996,7 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 }
 */
 void usercontrol(void) {
-  
-    std::uint32_t clock = sylib::millis();
+  std::uint32_t clock = sylib::millis();
 
   Intake.setVelocity(100,pct);
   int deadband = 5;
@@ -1012,6 +1007,7 @@ void usercontrol(void) {
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
   Controller1.ButtonX.pressed(toggleBlocker);
+  Controller1.ButtonLeft.pressed(togglePTO);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
   auto block = sylib::Addrled(22,8,40);
@@ -1053,27 +1049,27 @@ void usercontrol(void) {
     } else if (Controller1.ButtonDown.pressing()) {
       intakeMode = false;
     }
-
-    // Single Catapult Cycle
-    if (Controller1.ButtonR1.pressing()) {
-      vex::task run(bringCataDown);
-    } else if (Controller1.ButtonR2.pressing()) {
-        vex::task run(fullCataCycle);
-
-    } else if(Controller1.ButtonA.pressing()) {
-        Catapult1.spin(directionType::fwd);
-        Catapult2.spin(directionType::fwd);
-    }
-
-    // OUTTAKE
-    if(Controller1.ButtonL1.pressing()) {
-        Intake.spin(fwd);
-    } else if (Controller1.ButtonL2.pressing()) {
-        Intake.spin(directionType::rev);
+    if(hang) {
+      // OUTTAKE
+      if(Controller1.ButtonL1.pressing()) {
+          Catapult.spin(fwd);
+      } else if (Controller1.ButtonL2.pressing()) {
+          Catapult.spin(directionType::rev);
+      } else {
+          Catapult.stop();
+      }
     } else {
-        Intake.stop();
-    }
+      // Single Catapult Cycle
+      if (Controller1.ButtonR1.pressing()) {
+      } else if (Controller1.ButtonR2.pressing()) {
+          vex::task run(fullCataCycle);
 
+      } else if(Controller1.ButtonA.pressing()) {
+          Catapult1.spin(directionType::fwd);
+          Catapult2.spin(directionType::fwd);
+      }
+    }
+    
     // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
     if (fabs(rightMotorSpeed) < deadband) {
@@ -1084,6 +1080,8 @@ void usercontrol(void) {
     // Spin all drivetrain motors in the forward direction.
     leftGroup.spin(forward);
     rightGroup.spin(forward);
+    Brain.Screen.newLine();
+    Brain.Screen.print("%.1f, %.1f", inertialSensor.heading(deg), orientationHeading);
     wait(0.025,sec);
   }
 }
