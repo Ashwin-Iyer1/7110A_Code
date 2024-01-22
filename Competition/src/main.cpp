@@ -35,8 +35,8 @@ motor BackLeft = motor(PORT3, ratio6_1, true);
 motor FrontRight = motor(PORT4, ratio6_1, false);
 motor MidRight = motor(PORT5, ratio6_1, false);
 motor BackRight = motor(PORT6, ratio6_1, false);
-motor Catapult1 = motor(PORT10, ratio36_1, true);
-motor Catapult2 = motor(PORT9, ratio36_1, false);
+motor Catapult1 = motor(PORT10, ratio36_1, false);
+motor Catapult2 = motor(PORT9, ratio36_1, true);
 motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT10);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
@@ -1065,8 +1065,8 @@ void usercontrol(void) {
           vex::task run(fullCataCycle);
 
       } else if(Controller1.ButtonA.pressing()) {
-          Catapult1.spin(directionType::fwd);
-          Catapult2.spin(directionType::fwd);
+          Catapult1.spin(directionType::fwd, 50, pct);
+          Catapult2.spin(directionType::fwd, 50, pct);
       }
     }
     
