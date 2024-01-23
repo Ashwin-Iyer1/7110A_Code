@@ -38,10 +38,11 @@ motor BackRight = motor(PORT6, ratio6_1, false);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
-inertial inertialSensor = inertial(PORT10);
+inertial inertialSensor = inertial(PORT11);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
-rotation rotationSensor = rotation(PORT1);
+rotation sideTracking = rotation(PORT12);
+rotation forwardTracking = rotation(PORT13);
 pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
@@ -52,7 +53,52 @@ sylib::Addrled* BlockerLEDS;
 sylib::Addrled* Under1;
 sylib::Addrled* Under2;
 sylib::Addrled* Top;
+float gearRatio = 36.0/48.0;
+float wheelDiameter = 3.25;
+float wheelRadius = wheelDiameter/2;
+float robotRadius = 5.75;
+float drivetrainWidth = 11.5;
+float prevLeftRotation = 0;
+float prevRightRotation = 0;
+float orientation = 0;
+float orientationHeading = fmod(orientation+36000,360);
+float x = 0;
+float y = 0;
+double driveRotationConstant = 0.8721445746*1.054572148;
+/*
+class OdomGyro: public rotation
+{
+  private:
+    float prevLeft;
+    float prevRight;
+    float prevInertial;
+    rotation leftSide;
+    rotation rightSide;
+    float orientation;
+    float heading;
+    int updateRotation() {
+      float leftDiff = leftSide.position(deg) - prevLeft;
+      float rightDiff = rightSide.position(deg) - prevRight;
+      float odomDiff = ((leftDiff-rightDiff)/360*wheelDiameter*M_PI/drivetrainWidth)/M_PI*180;
+      float inertialDiff = 
+    }
+  public:
+    OdomGyro(inertial inert, rotation leftSide, rotation rightSide) {
 
+    }
+};
+*/
+struct Vector2d {
+  double x, y;
+  Vector2d() {
+    x=0;
+    y=0;
+  }
+  Vector2d(double xLocal, double yLocal, double angle=0) {
+    x = xLocal*cos(-angle/180*M_PI) + yLocal*sin(-angle/180*M_PI);
+    y = -xLocal*sin(-angle/180*M_PI) + yLocal*cos(-angle/180*M_PI);
+  }
+};
 bool catatoggle = false;
 bool hang = !pto.value();
 void stopCata() {
@@ -63,7 +109,7 @@ void cataMatchLoad() {
 }
 int fullCataCycle() {
   if(!hang){
-    Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+    Catapult.spinFor(directionType::rev, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
     stopCata();
   }
   return 1;
@@ -71,7 +117,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(fwd,100,pct);
+      Catapult.spin(reverse,100,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -106,11 +152,13 @@ int handleLEDs() {
         Under2->set_all(0xFF0000);
         idle = false;
     } else if(catatoggle){
+      /*
       int cataprogress = (int)rotationSensor.position(deg)*2.5;
       BlockerLEDS->set_all(cataprogress*65793);
       Top->set_all(cataprogress*65793);
       Under1->set_all(cataprogress*65793);
       Under2->set_all(cataprogress*65793);
+      */
       idle = false;
     } else if(!idle && !Blocker.value()){
       BlockerLEDS->set_all(0x000000);
@@ -137,18 +185,7 @@ int handleLEDs() {
     wait(50,msec);
   }
 }
-float gearRatio = 36.0/48.0;
-float wheelDiameter = 4.125;
-float wheelRadius = wheelDiameter/2;
-float robotRadius = 6.25;
-float drivetrainWidth = 12.5;
-float prevLeftRotation = 0;
-float prevRightRotation = 0;
-float orientation = 0;
-float orientationHeading = fmod(orientation+36000,360);
-float x = 0;
-float y = 0;
-double driveRotationConstant = 0.8721445746*1.054572148;
+
 vex::task odom;
 
 float distToRot(float dist) {
@@ -253,7 +290,7 @@ void odomUpdate() {
     //x += -radius * (sinf(-(radOrientation-M_PI/2)) - sinf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
     x += sinf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
     //y += radius * (cosf(-(radOrientation-M_PI/2)) - cosf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
-    x += cosf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
+    y += cosf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
   }
   prevLeftRotation = leftGroup.position(deg);
   prevRightRotation = rightGroup.position(deg);
@@ -384,9 +421,6 @@ bool followPath(const std::vector<std::vector<int>>& points) {
   rightGroup.stop();
   return true;
 }
-struct Vector2d {
-    double x, y;
-};
 
 struct Robot {
   double left_motor_speed;
@@ -562,7 +596,6 @@ void pre_auton(void) {
   while (inertialSensor.isCalibrating()) {
     wait(100, msec);
   } 
-  rotationSensor.resetPosition();
   inertialSensor.resetHeading();
   Catapult.setStopping(brakeType::coast);
   Catapult.setVelocity(100,pct);
@@ -1065,8 +1098,8 @@ void usercontrol(void) {
           vex::task run(fullCataCycle);
 
       } else if(Controller1.ButtonA.pressing()) {
-          Catapult1.spin(directionType::fwd);
-          Catapult2.spin(directionType::fwd);
+          Catapult1.spin(directionType::rev);
+          Catapult2.spin(directionType::rev);
       }
     }
     
