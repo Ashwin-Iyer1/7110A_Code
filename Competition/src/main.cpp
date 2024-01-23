@@ -597,7 +597,7 @@ void pre_auton(void) {
     wait(100, msec);
   } 
   inertialSensor.resetHeading();
-  Catapult.setStopping(brakeType::coast);
+  Catapult.setStopping(brakeType::brake);
   Catapult.setVelocity(100,pct);
   Intake.setVelocity(100,pct);
   leftGroup.setVelocity(50, percent);
