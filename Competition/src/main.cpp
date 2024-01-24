@@ -58,12 +58,24 @@ float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 5.75;
 float drivetrainWidth = 11.5;
-float prevLeftRotation = 0;
-float prevRightRotation = 0;
+float sideWheelDist = 6;
+float forwardWheelDist = -0.5;
+float prevForwardRotation = 0;
+float prevSideRotation = 0;
 float orientation = 0;
 float orientationHeading = fmod(orientation+36000,360);
-float x = 0;
-float y = 0;
+struct Vector2d {
+  double x, y;
+  Vector2d() {
+    x=0;
+    y=0;
+  }
+  Vector2d(double xLocal, double yLocal, double angle=0) {
+    x = xLocal*cos(-angle/180*M_PI) + yLocal*sin(-angle/180*M_PI);
+    y = -xLocal*sin(-angle/180*M_PI) + yLocal*cos(-angle/180*M_PI);
+  }
+};
+Vector2d currentPosition = {0,0};
 double driveRotationConstant = 0.8721445746*1.054572148;
 /*
 class OdomGyro: public rotation
@@ -88,17 +100,7 @@ class OdomGyro: public rotation
     }
 };
 */
-struct Vector2d {
-  double x, y;
-  Vector2d() {
-    x=0;
-    y=0;
-  }
-  Vector2d(double xLocal, double yLocal, double angle=0) {
-    x = xLocal*cos(-angle/180*M_PI) + yLocal*sin(-angle/180*M_PI);
-    y = -xLocal*sin(-angle/180*M_PI) + yLocal*cos(-angle/180*M_PI);
-  }
-};
+
 bool catatoggle = false;
 bool hang = !pto.value();
 void stopCata() {
@@ -109,7 +111,7 @@ void cataMatchLoad() {
 }
 int fullCataCycle() {
   if(!hang){
-    Catapult.spinFor(directionType::rev, 360, rotationUnits::deg, 100, velocityUnits::pct, true);
+    Catapult.spinFor(directionType::rev, 360, rotationUnits::deg, 50, velocityUnits::pct, true);
     stopCata();
   }
   return 1;
@@ -117,7 +119,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(reverse,100,pct);
+      Catapult.spin(reverse,50,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -190,6 +192,9 @@ vex::task odom;
 
 float distToRot(float dist) {
   return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
+}
+float rotToDist(float rot) {
+  return (rot/360*(wheelDiameter * M_PI)) * gearRatio;
 }
 
 bool smartTurn(float rot) {
@@ -277,23 +282,23 @@ bool turnToHeadingOdom(float heading) {
   return true;
 }
 void odomUpdate() {
-  float leftPos = (leftGroup.position(deg)-prevLeftRotation)/180*M_PI * wheelRadius * gearRatio;
-  float rightPos = (rightGroup.position(deg)-prevRightRotation)/180*M_PI * wheelRadius * gearRatio;
-  orientation += ((leftPos-rightPos)/drivetrainWidth)/M_PI*180;
+  float orientationDiff = -inertialSensor.rotation()-orientation;
+  orientation = -inertialSensor.rotation();
   orientationHeading = fmod(orientation+36000,360);
   float radOrientation = orientation/180*M_PI;
-  if(fabs((leftPos-rightPos)/drivetrainWidth) < 0.005) {
-    x += (leftPos+rightPos)/2 * cosf(-radOrientation + M_PI/2);
-    y += (leftPos+rightPos)/2 * sinf(-radOrientation + M_PI/2);
+  float forwardDiff = rotToDist(forwardTracking.position(deg)-prevForwardRotation);
+  float sideDiff = rotToDist(sideTracking.position(deg)-prevSideRotation);
+  prevForwardRotation = forwardTracking.position(deg);
+  prevSideRotation = sideTracking.position(deg);
+  if(orientationDiff < 0.001) {
+    Vector2d positionChange(sideDiff,forwardDiff,orientation);
+    currentPosition.x += positionChange.x;
+    currentPosition.y += positionChange.y;
   } else {
-    float radius = (leftPos/((leftPos-rightPos)/drivetrainWidth)) - drivetrainWidth/2;
-    //x += -radius * (sinf(-(radOrientation-M_PI/2)) - sinf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
-    x += sinf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
-    //y += radius * (cosf(-(radOrientation-M_PI/2)) - cosf(-((radOrientation - ((leftPos-rightPos)/drivetrainWidth))-M_PI/2)));
-    y += cosf(radOrientation) * 2 * sinf((leftPos-rightPos)/drivetrainWidth/2) * (rightPos/((leftPos-rightPos)/drivetrainWidth) + drivetrainWidth/2);
+    Vector2d positionChange(2*sin(orientationDiff/2*M_PI/180)*(sideDiff/orientationDiff + sideWheelDist),2*sin(orientationDiff/2*M_PI/180)*(forwardDiff/orientationDiff + forwardWheelDist),orientation + orientationDiff/2);
+    currentPosition.x += positionChange.x;
+    currentPosition.y += positionChange.y;
   }
-  prevLeftRotation = leftGroup.position(deg);
-  prevRightRotation = rightGroup.position(deg);
 }
 int runOdom() {
   while(true) {
@@ -383,45 +388,16 @@ void simpleTurn(float deg) {
   leftGroup.spinFor(fwd, dist, vex::deg, false);
   rightGroup.spinFor(reverse, dist, vex::deg, false);*/
   arc(0,deg,right);
-}
+}/*
 bool moveToPoint(float xPos, float yPos) {
-  turnToHeadingOdom(-atanf((xPos-x)/(yPos-y))/M_PI*180);
+  turnToHeading(-atanf((xPos-x)/(yPos-y))/M_PI*180);
   straight(sqrtf(pow(xPos-x,2) + pow(yPos-y,2)));
   return true;
 }
-bool followPath(const std::vector<std::vector<int>>& points) {
-  for(const auto& coordinates: points) {
-    float xTarget = coordinates[0];
-    float yTarget = coordinates[1];
-    float e = 0;
-    float d = 0;
-    float i = 0;
-    float eRec = 0;
-    float kp = 0.03;
-    float kd = 0.0;
-    float ki = 0.015;
-    float dt = 0.05;
-    float angle = atan((xTarget-x)/(yTarget-y))*180/M_PI;
-    float setpoint = angle + ((yTarget-y) > 0 ? 0 : 180);
-    while(pow(xTarget-x,2) + pow(yTarget-y,2) > 25) {
-      e = setpoint-fmod(orientation,360);
-      d = (e-eRec)/dt;
-      i += e*dt;
-      eRec = e;
-      leftGroup.setVelocity(40 - (e*kp + d*kd + i*ki),pct);
-      rightGroup.setVelocity(40 + (e*kp + d*kd + i*ki),pct);
-      leftGroup.spin(fwd);
-      rightGroup.spin(fwd);
-      Controller1.Screen.clearLine();
-      Controller1.Screen.print("%.1f, %.1f, %.1f", x, y, pow(xTarget-x,2) + pow(yTarget-y,2));
-      wait(dt,sec);
-    }
-  }
-  leftGroup.stop();
-  rightGroup.stop();
-  return true;
+*/
+int factorial(int n) {
+  return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-
 struct Robot {
   double left_motor_speed;
   double right_motor_speed;
@@ -429,7 +405,52 @@ struct Robot {
     return 55;
   }
 };
+namespace PascalTriangle {
+  std::vector<std::vector<int>> coefficients;
+  static void generateCoefficients(int degree) {
+    coefficients.clear();
+    for (int i = 1; i <= degree; i++) {
+      std::vector<int> row;
+      for (int j = 0; j <= i; j++) {
+        row.push_back(factorial(i)/(factorial(j)*factorial(i-j)));
+      }
+      coefficients.push_back(row);
+    }
+  }
+}
+class BezierCurve {
+  private:
+    std::vector<Vector2d> points;
 
+  public:
+    BezierCurve(std::initializer_list<Vector2d> args) {
+      for(Vector2d vector : args) {
+        points.push_back(vector);
+      }
+      if(points.size() > PascalTriangle::coefficients.size()+1) {
+        PascalTriangle::generateCoefficients(points.size());
+      }
+    }
+    Vector2d calculatePoint(double t) {
+      Vector2d result;
+        if(t<0) {
+          result.x = points.at(0).x;
+          result.y = points.at(0).y;
+          return result;
+        }
+        if(t>1) {
+          result.x = points.back().x;
+          result.y = points.back().y;
+          return result;
+        }
+        std::vector<int> bezierCoefficients = PascalTriangle::coefficients.at(points.size()-2);
+        for(int i=0; i<points.size(); i++) {
+          result.x += bezierCoefficients.at(i)*pow(1-t,points.size()-1-i)*pow(t,i)*points.at(i).x;
+          result.y += bezierCoefficients.at(i)*pow(1-t,points.size()-1-i)*pow(t,i)*points.at(i).y;
+        }
+        return result; 
+    }
+};
 class BezierSpline {
 public:
     BezierSpline(const Vector2d& p0, const Vector2d& p1, const Vector2d& p2)
@@ -500,7 +521,7 @@ class RobotController {
       float i = 0;
       float eRec = 0;
       Controller1.Screen.print("DOES THIS WORK");
-      double distance = sqrt((target_position.x-x)*(target_position.x-x) + (target_position.y-y)*(target_position.y-y));
+      double distance = sqrt((target_position.x-current_position.x)*(target_position.x-current_position.x) + (target_position.y-current_position.y)*(target_position.y-current_position.y));
       Controller1.Screen.print("STILL WORKING");
       wait(0.5,sec);
       double splineLength = spline.approxLength(10);
@@ -576,7 +597,7 @@ class RobotController {
     Vector2d getCurrentPosition() const {
         // Replace this with your actual logic to get the current robot position
         // For simplicity, assume the robot starts at the origin
-        return { x, y };
+        return currentPosition;
     }
 
 };
@@ -965,8 +986,7 @@ void programmingSkills(void) {
 void testing(void) {
   odom = vex::task(runOdom);
   orientation = 0;
-  x = 0;
-  y = 0;
+  currentPosition = {0,0};
   
   // followPath({
   //   {48,70},
@@ -1030,12 +1050,11 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 */
 void usercontrol(void) {
   std::uint32_t clock = sylib::millis();
-
+  pre_auton();
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
-  x = 35;
-  y = 7;
+  currentPosition = {35,7};
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
@@ -1098,8 +1117,8 @@ void usercontrol(void) {
           vex::task run(fullCataCycle);
 
       } else if(Controller1.ButtonA.pressing()) {
-          Catapult1.spin(directionType::rev);
-          Catapult2.spin(directionType::rev);
+          Catapult1.spin(directionType::rev, 50, pct);
+          Catapult2.spin(directionType::rev,50, pct);
       }
     }
     
@@ -1113,8 +1132,8 @@ void usercontrol(void) {
     // Spin all drivetrain motors in the forward direction.
     leftGroup.spin(forward);
     rightGroup.spin(forward);
-    Brain.Screen.newLine();
-    Brain.Screen.print("%.1f, %.1f", inertialSensor.heading(deg), orientationHeading);
+    Brain.Screen.clearLine();
+    Brain.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
     wait(0.025,sec);
   }
 }
