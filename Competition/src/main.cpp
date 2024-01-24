@@ -38,11 +38,19 @@ motor BackRight = motor(PORT6, ratio6_1, false);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
+<<<<<<< HEAD
+inertial inertialSensor = inertial(PORT20);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
+pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
+rotation sideTracking = rotation(PORT18);
+rotation forwardTracking = rotation(PORT19);
+=======
 inertial inertialSensor = inertial(PORT11);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation sideTracking = rotation(PORT12);
 rotation forwardTracking = rotation(PORT13);
+>>>>>>> ac7b4b40ad7d456efc1661efb577fe8dc676f429
 pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
