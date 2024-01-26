@@ -37,21 +37,13 @@ motor MidRight = motor(PORT5, ratio6_1, false);
 motor BackRight = motor(PORT6, ratio6_1, false);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
-motor Intake = motor(PORT7, ratio18_1, true);
-<<<<<<< HEAD
+motor Intake = motor(PORT21, ratio18_1, true);
 inertial inertialSensor = inertial(PORT20);
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.C);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 rotation sideTracking = rotation(PORT18);
 rotation forwardTracking = rotation(PORT19);
-=======
-inertial inertialSensor = inertial(PORT11);
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
-pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
-rotation sideTracking = rotation(PORT12);
-rotation forwardTracking = rotation(PORT13);
->>>>>>> ac7b4b40ad7d456efc1661efb577fe8dc676f429
-pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
+pneumatics pto = pneumatics(Brain.ThreeWirePort.A);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, MidRight);
@@ -210,8 +202,8 @@ bool smartTurn(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.7;
-  float kd = 0.01;
+  float kp = 0.5;
+  float kd = 0.3;
   float ki = 0;
   float dt = 0.02;
   float t=0;
@@ -507,7 +499,7 @@ class RobotController {
   public:
     RobotController(Robot& robot) : robot(robot) {}
 
-    void moveRobot(const Vector2d& middle_position, const Vector2d& target_position) {
+    void moveRobot(const Vector2d& middle_position, const Vector2d& target_position, vex::directionType direction = fwd) {
       double max_speed = 50.0;
       double lookAhead = 12.0;
 
@@ -515,27 +507,29 @@ class RobotController {
       BezierSpline spline(current_position, middle_position, target_position);
 
       Vector2d ogtan = spline.calculateTangent(0);
-      turnToHeading(-atan2(ogtan.y, ogtan.x) / M_PI * 180);
-      leftGroup.spin(fwd);
+      turnToHeading(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + 270);
+      Controller1.Screen.print(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + 90);
+      //leftGroup.spin(fwd);
       // leftGroup.setVelocity(20, pct);
-      rightGroup.spin(fwd);
+      //rightGroup.spin(fwd);
       // rightGroup.setVelocity(20, pct);
       //splinePos is the percent of the track the robot has completed
-      float kp = 0.05;
-      float ki = 0.005;
+      float kp = 0.2;
+      float ki = 0.000;
       float kd = 0.01;
       float e = 0;
       float d = 0;
       float i = 0;
       float eRec = 0;
-      Controller1.Screen.print("DOES THIS WORK");
+      // Controller1.Screen.print("DOES THIS WORK");
       double distance = sqrt((target_position.x-current_position.x)*(target_position.x-current_position.x) + (target_position.y-current_position.y)*(target_position.y-current_position.y));
-      Controller1.Screen.print("STILL WORKING");
-      wait(0.5,sec);
+      // Controller1.Screen.print("STILL WORKING");
+      //wait(0.5,sec);
       double splineLength = spline.approxLength(10);
+      //wait(5,sec);
       Controller1.Screen.clearLine();
-      Controller1.Screen.print(splineLength);
-      wait(0.5,sec);
+      Brain.Screen.print(splineLength);
+      //wait(5,sec);
       double timeStep = 0.1;
         double splinePos = 0.0;
         while (splinePos < 1-(lookAhead/splineLength)) {
@@ -548,21 +542,22 @@ class RobotController {
           // Brain.Screen.print(angle);
           // Brain.Screen.newLine();
           // Brain.Screen.print(orientationHeading);
-          angle = angle / M_PI * 180; //convert to degrees
-          double angle_difference = fmod(-orientationHeading - angle, 360);
-          if(fabs(angle_difference) > 180) angle_difference = (360-angle_difference*(angle_difference>0)? 1 : -1);
+          angle = angle / M_PI * 180 - 90; //convert to degrees
+          double angle_difference = -fmod(angle - orientationHeading, 360);
+          max_speed = fabs(50.0 - fabs(angle_difference) / 5);
+          if(fabs(angle_difference) > 180) angle_difference = (360-angle_difference*((angle_difference>0)? 1 : -1));
           e = angle_difference;
           d = (e-eRec)/timeStep;
           i += (e*timeStep);
           eRec = e;
           //distance = sqrt((desired_position.x-x)*(desired_position.x-x) + (desired_position.y-y)*(desired_position.y-y));
-          float speed = 2 * sinf((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth/2) * (rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60/((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth) + drivetrainWidth/2);
-        
+          //float speed = 2 * sinf((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth/2) * (rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60/((leftGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60-rightGroup.velocity(rpm)/gearRatio*wheelDiameter*M_PI/60)/drivetrainWidth) + drivetrainWidth/2);
+          
           //1 pct speed diff in 0.1 seconds = 0.3 degrees change
           double speed_difference = ki*i + kd*d + kp*e;
 
           Controller1.Screen.clearLine();
-          //Controller1.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
+          Controller1.Screen.print("d: %.1f a: %.1f", distance, angle_difference);
           Controller1.Screen.print(angle_difference);
           double left_speed = max_speed - speed_difference;
           double right_speed = max_speed + speed_difference;
@@ -574,20 +569,20 @@ class RobotController {
           // Brain.Screen.print(left_speed);
           // Brain.Screen.print("right: ");
           // Brain.Screen.print(right_speed);
-
+          float speed = (left_speed+right_speed)/2*6/60*2*M_PI*wheelRadius;
           // Brain.Screen.newLine();
 
-          //Brain.Screen.newLine();
+          Brain.Screen.newLine();
           //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
-
+          Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", angle_difference, splinePos, angle, orientation, inertialSensor.heading());
           // Move forward in time
           splinePos += (speed*timeStep)/splineLength;
 
           // Simulate robot movement (you may replace this with your actual motion control logic)
           leftGroup.setVelocity(robot.left_motor_speed, pct);
-          leftGroup.spin(fwd);
+          leftGroup.spin(direction);
           rightGroup.setVelocity(robot.right_motor_speed, pct);
-          rightGroup.spin(fwd);
+          rightGroup.spin(direction);
           wait(timeStep, sec);
         }
         straight(lookAhead);
@@ -627,7 +622,7 @@ void pre_auton(void) {
   } 
   inertialSensor.resetHeading();
   Catapult.setStopping(brakeType::brake);
-  Catapult.setVelocity(100,pct);
+  Catapult.setVelocity(50,pct);
   Intake.setVelocity(100,pct);
   leftGroup.setVelocity(50, percent);
   rightGroup.setVelocity(50, percent);
@@ -993,7 +988,9 @@ void programmingSkills(void) {
 }
 void testing(void) {
   odom = vex::task(runOdom);
-  orientation = 0;
+  orientation = -270;
+  inertialSensor.setHeading(270, deg);
+  inertialSensor.setRotation(270, deg);
   currentPosition = {0,0};
   
   // followPath({
@@ -1006,7 +1003,9 @@ void testing(void) {
     RobotController controller(myRobot);
 
     // Move the robot along a Bezier spline to the target position
-    controller.moveRobot({ 18, 6 }, { 12, 18 });
+    controller.moveRobot({ 12, -12 }, { 36, 12 }, reverse);
+    wait(1, sec);
+    controller.moveRobot({-24, 48}, {0, 48  });
     //left 0, right 10 for 1 second = 21 degrees
   // leftGroup.spin(fwd);
   // rightGroup.spin(fwd);
@@ -1058,7 +1057,7 @@ void draw_button(int x, int y, int w, int h, color color, char *text) {
 */
 void usercontrol(void) {
   std::uint32_t clock = sylib::millis();
-  pre_auton();
+  // pre_auton();
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
@@ -1120,15 +1119,16 @@ void usercontrol(void) {
       }
     } else {
       // Single Catapult Cycle
-      if (Controller1.ButtonR1.pressing()) {
-      } else if (Controller1.ButtonR2.pressing()) {
-          vex::task run(fullCataCycle);
-
-      } else if(Controller1.ButtonA.pressing()) {
-          Catapult1.spin(directionType::rev, 50, pct);
-          Catapult2.spin(directionType::rev,50, pct);
-      }
+      
     }
+    if (Controller1.ButtonR1.pressing()) {
+        Intake.spin(fwd, 100, pct);
+      } else if (Controller1.ButtonR2.pressing()) {
+          Intake.spin(reverse, 100, pct);
+      }
+      else {
+        Intake.stop();
+      }
     
     // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
@@ -1171,10 +1171,10 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideElim);
+  // Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  // Competition.autonomous(testing);
+  Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
