@@ -41,8 +41,10 @@ motor Intake = motor(PORT7, ratio18_1, true);
 inertial inertialSensor = inertial(PORT20);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
-rotation sideTracking = rotation(PORT19);
-rotation forwardTracking = rotation(PORT18);
+rotation sideTracking = rotation(PORT18);
+rotation forwardTracking = rotation(PORT19);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
+pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
 pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
