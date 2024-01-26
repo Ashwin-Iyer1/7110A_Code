@@ -654,12 +654,22 @@ int LEDRainbow() {
 void oppositeSide(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
+  odom = vex::task(runOdom);
+  orientation = -270;
+  inertialSensor.setHeading(270,deg); 
+  inertialSensor.setRotation(270, deg);
+  currentPosition = {0,0};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
-  inertialSensor.setHeading(270,deg); 
   Intake.spin(fwd);   
   straight(3, 35);
   wait(1,sec);
+  //pp stuff
+  straight(-20, 75);
+  Robot myRobot{ 0.0, 0.0 };
+  RobotController controller(myRobot);
+  controller.moveRobot({ -15, 0 }, { 20, 25 }, reverse);
+  /*
   straight(-26,75);
   Intake.stop();
   toggleWings();
@@ -678,6 +688,7 @@ void oppositeSide(void) {
   toggleBlocker();
   straight(-38);
   smartTurn(-20);
+  */
 }
 void oppositeSideUnsafe(void) {
   //start close to left of tile touching wall
@@ -1170,11 +1181,11 @@ int main() {
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
-  //Competition.autonomous(oppositeSide);
+  Competition.autonomous(oppositeSide);
   // Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(AWPSameSide);
-  Competition.autonomous(testing);
+  // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
   Competition.drivercontrol(usercontrol);
   //Competition.drivercontrol(driverSkills);
