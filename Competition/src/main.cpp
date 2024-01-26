@@ -38,11 +38,11 @@ motor BackRight = motor(PORT6, ratio6_1, false);
 motor Catapult1 = motor(PORT10, ratio36_1, true);
 motor Catapult2 = motor(PORT9, ratio36_1, false);
 motor Intake = motor(PORT7, ratio18_1, true);
-inertial inertialSensor = inertial(PORT11);
+inertial inertialSensor = inertial(PORT20);
 pneumatics Wings = pneumatics(Brain.ThreeWirePort.A);
 pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
-rotation sideTracking = rotation(PORT12);
-rotation forwardTracking = rotation(PORT13);
+rotation sideTracking = rotation(PORT19);
+rotation forwardTracking = rotation(PORT18);
 pneumatics pto = pneumatics(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
@@ -58,7 +58,7 @@ float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 5.75;
 float drivetrainWidth = 11.5;
-float sideWheelDist = 6;
+float sideWheelDist = 4;
 float forwardWheelDist = -0.5;
 float prevForwardRotation = 0;
 float prevSideRotation = 0;
@@ -111,7 +111,7 @@ void cataMatchLoad() {
 }
 int fullCataCycle() {
   if(!hang){
-    Catapult.spinFor(directionType::rev, 360, rotationUnits::deg, 50, velocityUnits::pct, true);
+    Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 50, velocityUnits::pct, true);
     stopCata();
   }
   return 1;
@@ -119,7 +119,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(reverse,50,pct);
+      Catapult.spin(fwd,50,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -202,8 +202,8 @@ bool smartTurn(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.7;
-  float kd = 0.01;
+  float kp = 0.5;
+  float kd = 0.05;
   float ki = 0;
   float dt = 0.02;
   float t=0;
@@ -232,8 +232,8 @@ bool smartTurnOdom(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.75;
-  float kd = 0.00825;
+  float kp = 0.375;
+  float kd = 0.025;
   float ki = 0;
   float dt = 0.02;
   float t=0;
@@ -286,11 +286,11 @@ void odomUpdate() {
   orientation = -inertialSensor.rotation();
   orientationHeading = fmod(orientation+36000,360);
   float radOrientation = orientation/180*M_PI;
-  float forwardDiff = rotToDist(forwardTracking.position(deg)-prevForwardRotation);
-  float sideDiff = rotToDist(sideTracking.position(deg)-prevSideRotation);
+  float forwardDiff = ((forwardTracking.position(deg)-prevForwardRotation)/360*(wheelDiameter * M_PI));
+  float sideDiff = ((sideTracking.position(deg)-prevSideRotation)/360*(wheelDiameter * M_PI));
   prevForwardRotation = forwardTracking.position(deg);
   prevSideRotation = sideTracking.position(deg);
-  if(orientationDiff < 0.001) {
+  if(orientationDiff < 0.1) {
     Vector2d positionChange(sideDiff,forwardDiff,orientation);
     currentPosition.x += positionChange.x;
     currentPosition.y += positionChange.y;
@@ -299,6 +299,12 @@ void odomUpdate() {
     currentPosition.x += positionChange.x;
     currentPosition.y += positionChange.y;
   }
+}
+int printOdom() {
+  while(true);
+  Controller1.Screen.clearLine();
+    Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
+    wait(100,msec);
 }
 int runOdom() {
   while(true) {
@@ -322,8 +328,8 @@ void straight(float dist, distanceUnits units) {
     if(leftGroup.isDone() && rightGroup.isDone()) break;
     wait(0.025,sec);
   }
-  leftGroup.stop();
-  rightGroup.stop();
+  leftGroup.stop(brake);
+  rightGroup.stop(brake);
 }
 void straight(float dist, float speed) {
   leftGroup.setVelocity(speed,pct);
@@ -371,14 +377,16 @@ void arc(float radius, float angle, turnType side) {
     rightspeed=1;
   }
   
-  leftGroup.setVelocity(leftspeed * 75,pct);
-  rightGroup.setVelocity(rightspeed * 75,pct);
+  leftGroup.setVelocity(leftspeed * 50,pct);
+  rightGroup.setVelocity(rightspeed * 50,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, false);
-  for(double t=0; t<fabs(fmax(leftArc,rightArc))/20; t+=0.025) {
-    if(!leftGroup.isSpinning() && !rightGroup.isSpinning()) break;
+  wait(0.1,sec);
+  for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
+    if(leftGroup.isDone() && rightGroup.isDone()) break;
     wait(0.025,sec);
   }
+  //wait(1,sec);
   leftGroup.stop();
   rightGroup.stop();
 }
@@ -812,23 +820,21 @@ void sameSide(void) {
 }
 void AWPSameSide(void) {
   inertialSensor.setHeading(90,deg);
-  arc(16.5,90,left);
+  arc(17,60,left);
+  straight(-18);
   turnToHeading(180);
-  slam(reverse);
-  straight(4);
+  straight(-5);
+  straight(9);
   turnToHeading(0);
-  straight(-2);
   toggleWings();
-  arc(16.5,-90,right);
-  straight(2);
+  arc(12,-90,right);
+  //straight(2);
   toggleWings();
-  straight(4);
-  turnToHeading(315);
-  straight(-16);
+  //straight(4);
   turnToHeading(270);
   toggleBlocker();
-  straight(-20,100);
-  straight(-8,35);
+  straight(-30);
+  straight(-4,35);
 }
 void programmingSkills(void) {
   /*
@@ -926,32 +932,32 @@ void programmingSkills(void) {
   turnToHeading(300);
   straight();
   */
- inertialSensor.setHeading(90,deg);
-  
-  arc(18,90,left);
+ inertialSensor.setHeading(270,deg);
+  hang = false;
+  arc(18,-90,right);
   slam(reverse);
   straight(10.5);
-  turnToHeading(73.5);
+  turnToHeading(286.5);
   straight(-3);
-  turnToHeading(69);
+  turnToHeading(291);
   toggleWings();
   toggleCata();
   float realOrientation = inertialSensor.heading(deg);
-  wait(33,sec);
+  wait(2,sec);
   toggleCata();
   toggleWings();
   //bringCataDown(250);
   //go to other side
   inertialSensor.setHeading(realOrientation,deg);
   straight(4);
-  turnToHeading(315);
-  arc(120,-17,right);
-  turnToHeading(270);
+  turnToHeading(45);
+  arc(120,17,left);
+  turnToHeading(90);
   
   straight(-54);
   //go to other side
   //toggleWings();
-  arc(22.5,-90,right);
+  arc(22.5,90,left);
   turnToHeading(180);
   slam(reverse);
   straight(4);
@@ -962,26 +968,26 @@ void programmingSkills(void) {
   // slam(reverse);
   //toggleWings();
   //backup
-  arc(11.5,160,right);
-  turnToHeading(160);
+  arc(11.5,-160,left);
+  turnToHeading(20);
   //backup
+  straight(22);
+  toggleWings();
+  arc(10,-102.5,left);
+  slam(fwd);
+  straight(-14);
+  slam(fwd);
   straight(-22);
   toggleWings();
-  arc(15,102.5,left);
-  slam(reverse);
-  straight(6);
-  slam(reverse);
-  straight(8);
+  arc(50,-40,right);
+  turnToHeading(180);
+  straight(-40);
+  turnToHeading(225);
   toggleWings();
-  arc(50,40,right);
-  turnToHeading(0);
-  straight(40);
-  turnToHeading(315);
+  arc(70,45,right);
+  straight(-10);
   toggleWings();
-  arc(70,-45,right);
-  straight(10);
-  toggleWings();
-  straight(50);
+  straight(-50);
 }
 void testing(void) {
   odom = vex::task(runOdom);
@@ -1054,7 +1060,6 @@ void usercontrol(void) {
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
-  currentPosition = {35,7};
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
@@ -1062,6 +1067,7 @@ void usercontrol(void) {
   Controller1.ButtonLeft.pressed(togglePTO);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
+  //vex::task printCoords(printOdom);
   auto block = sylib::Addrled(22,8,40);
   BlockerLEDS = &block;
   auto und1 = sylib::Addrled(22,7,14);
@@ -1071,6 +1077,7 @@ void usercontrol(void) {
   auto top = sylib::Addrled(22,5,23);
   Top = &top;
   vex::task leds(handleLEDs);
+  currentPosition = {0,0};
   while (true) {
     //tank drive
     sylib::delay_until(&clock, 10);
@@ -1103,9 +1110,9 @@ void usercontrol(void) {
     }
     if(hang) {
       // OUTTAKE
-      if(Controller1.ButtonL1.pressing()) {
+      if(Controller1.ButtonR1.pressing()) {
           Catapult.spin(fwd);
-      } else if (Controller1.ButtonL2.pressing()) {
+      } else if (Controller1.ButtonR2.pressing()) {
           Catapult.spin(directionType::rev);
       } else {
           Catapult.stop();
@@ -1117,8 +1124,8 @@ void usercontrol(void) {
           vex::task run(fullCataCycle);
 
       } else if(Controller1.ButtonA.pressing()) {
-          Catapult1.spin(directionType::rev, 50, pct);
-          Catapult2.spin(directionType::rev,50, pct);
+          Catapult1.spin(directionType::fwd, 50, pct);
+          Catapult2.spin(directionType::fwd,50, pct);
       }
     }
     
@@ -1132,9 +1139,10 @@ void usercontrol(void) {
     // Spin all drivetrain motors in the forward direction.
     leftGroup.spin(forward);
     rightGroup.spin(forward);
-    Brain.Screen.clearLine();
-    Brain.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
-    wait(0.025,sec);
+    Controller1.Screen.setCursor(0,0);
+    Controller1.Screen.clearLine();
+    Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
+    wait(0.05,sec);
   }
 }
 void driverSkills(void) {
@@ -1163,12 +1171,12 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideElim);
+  //Competition.autonomous(oppositeSideElim);
   //Competition.autonomous(sameSide);
-  //Competition.autonomous(AWPSameSide);
+  Competition.autonomous(programmingSkills);
   // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  Competition.drivercontrol(usercontrol);
+  Competition.drivercontrol(driverSkills);
   //Competition.drivercontrol(driverSkills);
   // Prevent main from exiting with an infinite loop.
   while (true) {
