@@ -19,37 +19,39 @@
 #include "sylib/addrled.hpp"
 #include "vex_motor.h"
 #include <cmath>
+#include <map>
+#include <set>
 
 using namespace vex;
 
 // A global instance of competition
 competition Competition;
 
-vex::brain       Brain;
+vex::brain Brain;
 
 controller Controller1 = controller(primary);
 
-motor FrontLeft = motor(PORT1, ratio6_1, true);
-motor MidLeft = motor(PORT2, ratio6_1, true);
-motor BackLeft = motor(PORT3, ratio6_1, true);
-motor FrontRight = motor(PORT4, ratio6_1, false);
-motor MidRight = motor(PORT5, ratio6_1, false);
-motor BackRight = motor(PORT6, ratio6_1, false);
-motor Catapult1 = motor(PORT10, ratio36_1, true);
-motor Catapult2 = motor(PORT9, ratio36_1, false);
-motor Intake = motor(PORT21, ratio18_1, true);
-inertial inertialSensor = inertial(PORT20);
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.C);
-pneumatics Blocker = pneumatics(Brain.ThreeWirePort.B);
-rotation sideTracking = rotation(PORT18);
+motor FrontLeft =             motor(PORT1, ratio6_1, true);
+motor MidLeft =               motor(PORT2, ratio6_1, true);
+motor BackLeft =              motor(PORT3, ratio6_1, true);
+motor FrontRight =            motor(PORT4, ratio6_1, false);
+motor MidRight =              motor(PORT5, ratio6_1, false);
+motor BackRight =             motor(PORT6, ratio6_1, false);
+motor Catapult1 =             motor(PORT10, ratio18_1, true);
+motor Catapult2 =             motor(PORT9, ratio18_1, false);
+motor Intake =                motor(PORT8, ratio18_1, true);
+inertial inertialSensor =  inertial(PORT20);
+rotation sideTracking =    rotation(PORT18);
 rotation forwardTracking = rotation(PORT19);
 pneumatics pto = pneumatics(Brain.ThreeWirePort.A);
+pneumatics Descore = pneumatics(Brain.ThreeWirePort.B);
+pneumatics Wings = pneumatics(Brain.ThreeWirePort.C);
 
 motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, MidRight);
 motor_group Catapult = motor_group(Catapult1, Catapult2);
 
-sylib::Addrled* BlockerLEDS;
+sylib::Addrled* DescoreLEDS;
 sylib::Addrled* Under1;
 sylib::Addrled* Under2;
 sylib::Addrled* Top;
@@ -58,7 +60,7 @@ float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
 float robotRadius = 5.75;
 float drivetrainWidth = 11.5;
-float sideWheelDist = 4;
+float sideWheelDist = 6;
 float forwardWheelDist = -0.5;
 float prevForwardRotation = 0;
 float prevSideRotation = 0;
@@ -71,8 +73,11 @@ struct Vector2d {
     y=0;
   }
   Vector2d(double xLocal, double yLocal, double angle=0) {
-    x = xLocal*cos(-angle/180*M_PI) + yLocal*sin(-angle/180*M_PI);
-    y = -xLocal*sin(-angle/180*M_PI) + yLocal*cos(-angle/180*M_PI);
+    x = xLocal*cos(angle/180*M_PI) - yLocal*sin(angle/180*M_PI);
+    y = xLocal*sin(angle/180*M_PI) + yLocal*cos(angle/180*M_PI);
+  }
+  double distance(Vector2d other) {
+    return sqrt(pow(x-other.x,2) + pow(y-other.y,2));
   }
 };
 Vector2d currentPosition = {0,0};
@@ -119,7 +124,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(fwd,50,pct);
+      Catapult.spin(fwd,100,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -130,45 +135,54 @@ void toggleCata() {
 void toggleWings() {
   Wings.set(!Wings.value());
 }
-void toggleBlocker() {
-  Blocker.set(!Blocker.value());
+void toggleDescore() {
+  Descore.set(!Descore.value());
   
 }
 void togglePTO() {
   pto.set(!pto.value());
   hang = !hang;
 }
-
+int releaseIntake() {
+  Catapult.spinFor(fwd,160, deg);
+  wait(0.2,sec);
+  Catapult.spinFor(reverse, 860, deg);
+  return Catapult.position(deg);
+}
+int getHangReady() {
+  Catapult.spinFor(fwd, 1500, deg);
+  return Catapult.position(deg);
+}
 int handleLEDs() {
-  bool prevBlocker = Blocker.value();
+  bool prevDescore = Descore.value();
   bool idle = false;
   while(true) {
-    if(Blocker.value() && !prevBlocker) {
-        BlockerLEDS->set_all(0x000000);
-        BlockerLEDS -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
-        BlockerLEDS -> cycle(**BlockerLEDS, 25);
+    if(Descore.value() && !prevDescore) {
+        DescoreLEDS->set_all(0x000000);
+        DescoreLEDS -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
+        DescoreLEDS -> cycle(**DescoreLEDS, 25);
         Top->set_all(0x000000);
         Top -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
-        Top -> cycle(**BlockerLEDS, 25);
+        Top -> cycle(**DescoreLEDS, 25);
         Under1->set_all(0xFF0000);
         Under2->set_all(0xFF0000);
         idle = false;
     } else if(catatoggle){
       /*
       int cataprogress = (int)rotationSensor.position(deg)*2.5;
-      BlockerLEDS->set_all(cataprogress*65793);
+      DescoreLEDS->set_all(cataprogress*65793);
       Top->set_all(cataprogress*65793);
       Under1->set_all(cataprogress*65793);
       Under2->set_all(cataprogress*65793);
       */
       idle = false;
-    } else if(!idle && !Blocker.value()){
-      BlockerLEDS->set_all(0x000000);
+    } else if(!idle && !Descore.value()){
+      DescoreLEDS->set_all(0x000000);
       Top->set_all(0x000000);
       Under1->set_all(0x000000);
       Under2->set_all(0x000000);
-      BlockerLEDS -> gradient(0x600000, 0x600002, 0, 0, false, true);
-      BlockerLEDS -> cycle(**BlockerLEDS, 10);
+      DescoreLEDS -> gradient(0x600000, 0x600002, 0, 0, false, true);
+      DescoreLEDS -> cycle(**DescoreLEDS, 10);
 
       Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Top -> cycle(**Top, 10);
@@ -183,7 +197,7 @@ int handleLEDs() {
       Under2 -> cycle(**Under2, 10);
       idle = true;
     }
-    prevBlocker = Blocker.value();
+    prevDescore = Descore.value();
     wait(50,msec);
   }
 }
@@ -283,6 +297,7 @@ bool turnToHeadingOdom(float heading) {
 }
 void odomUpdate() {
   float orientationDiff = -inertialSensor.rotation()-orientation;
+  float radOrientationDiff = orientationDiff*M_PI/180;
   orientation = -inertialSensor.rotation();
   orientationHeading = fmod(orientation+36000,360);
   float radOrientation = orientation/180*M_PI;
@@ -295,7 +310,7 @@ void odomUpdate() {
     currentPosition.x += positionChange.x;
     currentPosition.y += positionChange.y;
   } else {
-    Vector2d positionChange(2*sin(orientationDiff/2*M_PI/180)*(sideDiff/orientationDiff + sideWheelDist),2*sin(orientationDiff/2*M_PI/180)*(forwardDiff/orientationDiff + forwardWheelDist),orientation + orientationDiff/2);
+    Vector2d positionChange(2*sin(radOrientationDiff)*(sideDiff/radOrientationDiff + sideWheelDist),2*sin(radOrientationDiff)*(forwardDiff/radOrientationDiff + forwardWheelDist),orientation + orientationDiff/2);
     currentPosition.x += positionChange.x;
     currentPosition.y += positionChange.y;
   }
@@ -381,7 +396,7 @@ void arc(float radius, float angle, turnType side) {
   rightGroup.setVelocity(rightspeed * 50,pct);
   leftGroup.spinFor(distToRot(leftArc), deg, false);
   rightGroup.spinFor(distToRot(rightArc), deg, false);
-  wait(0.1,sec);
+  wait(0.5,sec);
   for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
     if(leftGroup.isDone() && rightGroup.isDone()) break;
     wait(0.025,sec);
@@ -458,46 +473,110 @@ class BezierCurve {
         }
         return result; 
     }
-};
-class BezierSpline {
-public:
-    BezierSpline(const Vector2d& p0, const Vector2d& p1, const Vector2d& p2)
-        : P0(p0), P1(p1), P2(p2) {}
-
-    Vector2d calculatePoint(double t) const {
-        Vector2d result;
+    Vector2d calculateTangent(double t) {
+      Vector2d result;
         if(t<0) {
-          result.x = P0.x;
-          result.y = P0.y;
+          result.x = points.at(0).x;
+          result.y = points.at(0).y;
           return result;
         }
         if(t>1) {
-          result.x = P2.x;
-          result.y = P2.y;
+          result.x = points.back().x;
+          result.y = points.back().y;
           return result;
         }
-        result.x = (1 - t) * (1 - t) * P0.x + 2 * (1 - t) * t * P1.x + t * t * P2.x;
-        result.y = (1 - t) * (1 - t) * P0.y + 2 * (1 - t) * t * P1.y + t * t * P2.y;
+        std::vector<int> bezierCoefficients = PascalTriangle::coefficients.at(points.size()-2);
+        for(int i=0; i<points.size(); i++) {
+          result.x += int32_t(-1*(points.size()-1-i)*bezierCoefficients.at(i)*pow(1-t,points.size()-2-i)*pow(t,i)*points.at(i).x + bezierCoefficients.at(i)*pow(1-t,points.size()-1-i)*i*pow(t,i-1)*points.at(i).x);
+          result.y += int32_t(-1*(points.size()-1-i)*bezierCoefficients.at(i)*pow(1-t,points.size()-2-i)*pow(t,i)*points.at(i).y + bezierCoefficients.at(i)*pow(1-t,points.size()-1-i)*i*pow(t,i-1)*points.at(i).y);
+        }
         return result; 
     }
+};
+class BezierSpline {
+public:
+  std::map<double,Vector2d> lut;
+  BezierSpline(const Vector2d& p0, const Vector2d& p1, const Vector2d& p2)
+    : P0(p0), P1(p1), P2(p2) {}
 
-    Vector2d calculateTangent(double t) const {
-        Vector2d tangent;
-        // tangent.x = 2 * (1 - t) * (P1.x - P0.x) + 2 * t * (P2.x - P1.x);
-        // tangent.y = 2 * (1 - t) * (P1.y - P0.y) + 2 * t * (P2.y - P1.y);
-        tangent.x = -2 * (1 - t) * P0.x + 2 * (1 - 2 * t) * P1.x + 2 * t * P2.x;
-        tangent.y = -2 * (1 - t) * P0.y + 2 * (1 - 2 * t) * P1.y + 2 * t * P2.y;
-        return tangent;
+  Vector2d calculatePoint(double t) const {
+    Vector2d result;
+    if(t<0) {
+      result.x = P0.x;
+      result.y = P0.y;
+      return result;
     }
-    double approxLength(int intervals) {
-      double length = 0;
-      for(float t=0; t<intervals; t++) {
-        Vector2d currentPos = calculatePoint(1.0/intervals*t);
-        Vector2d nextPos = calculatePoint((1.0/intervals)*(t+1));
-        length += sqrt(pow(nextPos.x - currentPos.x,2) + pow(nextPos.y - currentPos.y,2));
+    if(t>1) {
+      result.x = P2.x;
+      result.y = P2.y;
+      return result;
+    }
+    result.x = (1 - t) * (1 - t) * P0.x + 2 * (1 - t) * t * P1.x + t * t * P2.x;
+    result.y = (1 - t) * (1 - t) * P0.y + 2 * (1 - t) * t * P1.y + t * t * P2.y;
+    return result; 
+  }
+
+  Vector2d calculateTangent(double t) const {
+    Vector2d tangent;
+    // tangent.x = 2 * (1 - t) * (P1.x - P0.x) + 2 * t * (P2.x - P1.x);
+    // tangent.y = 2 * (1 - t) * (P1.y - P0.y) + 2 * t * (P2.y - P1.y);
+    tangent.x = -2 * (1 - t) * P0.x + 2 * (1 - 2 * t) * P1.x + 2 * t * P2.x;
+    tangent.y = -2 * (1 - t) * P0.y + 2 * (1 - 2 * t) * P1.y + 2 * t * P2.y;
+    return tangent;
+  }
+  double approxLength(int intervals) {
+    double length = 0;
+    for(float t=0; t<intervals; t++) {
+      Vector2d currentPos = calculatePoint(1.0/intervals*t);
+      Vector2d nextPos = calculatePoint((1.0/intervals)*(t+1));
+      length += sqrt(pow(nextPos.x - currentPos.x,2) + pow(nextPos.y - currentPos.y,2));
+    }
+    return length;
+  }
+  void bake(int intervals) {
+    for(int t=0; t<intervals; t++) {
+      lut[1.0/intervals*t] = calculatePoint(1.0/intervals*t);
+    }
+  }
+  double intersectCircle(double r, double x, double y) {
+    int intervals = lut.size();
+    Vector2d circleCenter(x,y);
+    std::set<double> intersections;
+    for(int i=1; i<lut.size()-1; i++) {
+      double beginning = 1.0/intervals*(i-1);
+      double midpoint = 1.0/intervals*i;
+      double end = 1.0/intervals*(i+1);
+      double prevDist = fabs(circleCenter.distance(lut.at(beginning))-r);
+      double currDist = fabs(circleCenter.distance(lut.at(midpoint))-r);
+      double nextDist = fabs(circleCenter.distance(lut.at(end))-r);
+      double closest;
+      double closestPoint;
+      for(int it=0; it<10; it++) {
+        closest = fmin(prevDist, fmin(currDist,nextDist));
+        if(prevDist==closest) {
+          closestPoint = beginning;
+          end = midpoint;
+          midpoint = (beginning+end)/2;
+          nextDist = currDist;
+          currDist = fabs(circleCenter.distance(calculatePoint(midpoint))-r);
+        } else if(currDist==closest) {
+          closestPoint = midpoint;
+          beginning = (beginning+midpoint)/2;
+          end = (midpoint+end)/2;
+          prevDist = fabs(circleCenter.distance(calculatePoint(beginning))-r);
+          nextDist = fabs(circleCenter.distance(calculatePoint(end))-r);
+        } else {
+          closestPoint = end;
+          beginning = midpoint;
+          midpoint = (beginning+end)/2;
+          prevDist = currDist;
+          currDist = fabs(circleCenter.distance(calculatePoint(midpoint))-r);
+        }
       }
-      return length;
+      if(closest<0.05) intersections.insert(closestPoint);
     }
+    return (intersections.size()>0) ? *intersections.rbegin() : -1;
+  }
 
 private:
     Vector2d P0, P1, P2;
@@ -509,7 +588,7 @@ class RobotController {
 
     void moveRobot(const Vector2d& middle_position, const Vector2d& target_position, vex::directionType direction = fwd) {
       double max_speed = 50.0;
-      double lookAhead = 12.0;
+      double lookAhead = 24.0;
 
       Vector2d current_position = getCurrentPosition();
       BezierSpline spline(current_position, middle_position, target_position);
@@ -522,7 +601,7 @@ class RobotController {
       //rightGroup.spin(fwd);
       // rightGroup.setVelocity(20, pct);
       //splinePos is the percent of the track the robot has completed
-      float kp = 0.2;
+      float kp = 0.6;
       float ki = 0.000;
       float kd = 0.01;
       float e = 0;
@@ -540,17 +619,15 @@ class RobotController {
       //wait(5,sec);
       double timeStep = 0.1;
         double splinePos = 0.0;
-        while (splinePos < 1-(lookAhead/splineLength)) {
-          
-          Vector2d desired_position = spline.calculatePoint(splinePos+(lookAhead/splineLength));
-          Vector2d tangent = spline.calculateTangent(splinePos+(lookAhead/splineLength));
+        for (double desiredPoint=0; desiredPoint >= 0; desiredPoint = spline.intersectCircle(lookAhead,currentPosition.x,currentPosition.y)) {
+          Vector2d tangent = spline.calculateTangent(desiredPoint);
           
           // Simple control logic: adjust left and right motor speeds based on tangent
           double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
           // Brain.Screen.print(angle);
           // Brain.Screen.newLine();
           // Brain.Screen.print(orientationHeading);
-          angle = angle / M_PI * 180 - 90; //convert to degrees
+          angle = angle / M_PI * 180 + 90; //convert to degrees
           double angle_difference = -fmod(angle - orientationHeading, 360);
           max_speed = fabs(50.0 - fabs(angle_difference) / 5);
           if(fabs(angle_difference) > 180) angle_difference = (360-angle_difference*((angle_difference>0)? 1 : -1));
@@ -567,8 +644,8 @@ class RobotController {
           Controller1.Screen.clearLine();
           Controller1.Screen.print("d: %.1f a: %.1f", distance, angle_difference);
           Controller1.Screen.print(angle_difference);
-          double left_speed = max_speed - speed_difference;
-          double right_speed = max_speed + speed_difference;
+          double left_speed = (direction == fwd) ? max_speed - speed_difference : max_speed+speed_difference;
+          double right_speed = (direction == fwd) ? max_speed + speed_difference : max_speed-speed_difference;
 
           // Send motor commands to the robot
           robot.left_motor_speed = left_speed;
@@ -577,14 +654,12 @@ class RobotController {
           // Brain.Screen.print(left_speed);
           // Brain.Screen.print("right: ");
           // Brain.Screen.print(right_speed);
-          float speed = (left_speed+right_speed)/2*6/60*2*M_PI*wheelRadius;
           // Brain.Screen.newLine();
 
           Brain.Screen.newLine();
           //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
-          Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", angle_difference, splinePos, angle, orientation, inertialSensor.heading());
+          Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f", angle_difference, splinePos, angle, orientation, inertialSensor.heading(), currentPosition.x, currentPosition.y);
           // Move forward in time
-          splinePos += (speed*timeStep)/splineLength;
 
           // Simulate robot movement (you may replace this with your actual motion control logic)
           leftGroup.setVelocity(robot.left_motor_speed, pct);
@@ -593,7 +668,7 @@ class RobotController {
           rightGroup.spin(direction);
           wait(timeStep, sec);
         }
-        straight(lookAhead);
+        //straight(lookAhead);
 
         // Stop the robot when the path is complete
         robot.left_motor_speed = 0.0;
@@ -630,10 +705,12 @@ void pre_auton(void) {
   } 
   inertialSensor.resetHeading();
   Catapult.setStopping(brakeType::brake);
-  Catapult.setVelocity(50,pct);
+  Catapult.setVelocity(100,pct);
   Intake.setVelocity(100,pct);
   leftGroup.setVelocity(50, percent);
   rightGroup.setVelocity(50, percent);
+  sideTracking.resetPosition();
+  forwardTracking.resetPosition();
 }
 void brakeAll() {
   leftGroup.setStopping(brakeType::brake);
@@ -643,8 +720,8 @@ void brakeAll() {
 vex::task LED;
 int LEDRainbow() {
     std::uint32_t clock = sylib::millis();
-    BlockerLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    BlockerLEDS -> cycle(Top -> buffer, 10);
+    DescoreLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    DescoreLEDS -> cycle(Top -> buffer, 10);
 
     Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
     Top -> cycle(Top -> buffer, 10);
@@ -663,20 +740,47 @@ void oppositeSide(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
   odom = vex::task(runOdom);
-  orientation = -270;
-  inertialSensor.setHeading(270,deg); 
-  inertialSensor.setRotation(270, deg);
-  currentPosition = {0,0};
+  orientation = -45;
+  inertialSensor.setHeading(45,deg); 
+  inertialSensor.setRotation(45, deg);
+  //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
+  releaseIntake();
+  toggleDescore();
+  //straight(-5);
+  arc(18, -45, right);
+  toggleDescore();
+  slam(reverse);
+  straight(5);
+  turnToHeading(90);
+  straight(40);
+  turnToHeading(40);
+  straight(20);
+  /*
   Intake.spin(fwd);   
   straight(3, 35);
-  wait(1,sec);
+  wait(0.5,sec);
   //pp stuff
-  straight(-20, 75);
+  straight(-23, 75);
+  Intake.stop();
+  toggleDescore();
+  arc(16,-75,right);
+  toggleDescore();
+  simpleTurn(15);
+  slam(reverse);
+  arc(20,150,right);
+  straight(18);
+  turnToHeading(270);
+  Intake.spin(reverse);
+  straight(12);*/
+  /*
   Robot myRobot{ 0.0, 0.0 };
   RobotController controller(myRobot);
-  controller.moveRobot({ -15, 0 }, { 20, 25 }, reverse);
+  toggleDescore();
+  controller.moveRobot({ 12.5, 120 }, { 9.5, 118 }, reverse);
+  toggleDescore();
+  slam(reverse);*/
   /*
   straight(-26,75);
   Intake.stop();
@@ -693,48 +797,50 @@ void oppositeSide(void) {
   wait(0.3, sec);
   slam(fwd);
   turnToHeading(35);
-  toggleBlocker();
+  toggleDescore();
   straight(-38);
   smartTurn(-20);
   */
 }
 void oppositeSideUnsafe(void) {
-  //start close to left of tile touching wall
-  // vex::task run(bringCataDown);
+  //odom = vex::task(runOdom);
+  //orientation = -90;
+  inertialSensor.setHeading(90,deg); 
+  inertialSensor.setRotation(90, deg);
+  //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
-  inertialSensor.setHeading(270,deg); 
+  vex::task run(releaseIntake);
+  //straight(-5);
+  wait(0.5, sec);
   Intake.spin(fwd);   
-  straight(3, 35);
-  wait(0.5,sec);
-  straight(-28,75);
+  straight(5, 35);
+  wait(1,sec);
+  //pp stuff
+  straight(-26, 75);
   Intake.stop();
-  toggleWings();
-  arc(16.5,-90,right);
-  toggleWings();
-  wait(0.5,sec);
-  turnToHeading(205);
+  toggleDescore();
+  arc(15,-90,right);
+  toggleDescore();
+  smartTurn(15);
   slam(reverse);
-  turnToHeading(180);
-  arc(12,180,right);
-  // elim diff
-  straight(30);
-  turnToHeading(80);
+  arc(14,150,right);
+  straight(26.5);
+  turnToHeading(270);
   Intake.spin(reverse);
-  straight(-8);
-  turnToHeading(255);
-  Intake.spin(fwd);
-  straight(18);
-  straight(-8);
-  turnToHeading(72.5);
-  Intake.spin(reverse);
-  slam(fwd);
+  wait(0.5,sec);
+  straight(19);
   Intake.stop();
-  //outtake both balls
-  straight(-4);
-  turnToHeading(50);
-  toggleBlocker();
-  straight(-40);
+  straight(-12);
+  /*turnToHeading(70);
+  Intake.spin(fwd);
+  straight(36);
+  Intake.stop();
+  turnToHeading(270);
+  toggleWings();
+  slam(fwd);
+  straight(-15);
+  toggleWings();*/
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
@@ -785,10 +891,14 @@ void oppositeSideElim(void) {
   */
 }
 void sameSide(void) {
+  straight(-18);
+  releaseIntake();
+  //Intake.spin(fwd);
   //vex::task run(LEDRainbow);
   //vex::task run(bringCataDown);
-  Intake.setVelocity(100,pct);
+  //Intake.setVelocity(100,pct);
   // score alliance triball to near net    
+  /*
   inertialSensor.setHeading(180,deg); 
   arc(110, 24, left);
   toggleWings();
@@ -809,10 +919,10 @@ void sameSide(void) {
   turnToHeading(315);
   straight(-8);
   turnToHeading(270);
-  Blocker.set(true);
+  Descore.set(true);
   straight(-22);
   straight(-12,50);
-  smartTurn(20);
+  smartTurn(20);*/
   // straight(7.2);
   // turnToHeading(90);
   // straight(32);
@@ -833,22 +943,33 @@ void sameSide(void) {
   // Intake.stop();
 }
 void AWPSameSide(void) {
-  inertialSensor.setHeading(90,deg);
-  arc(17,60,left);
+  inertialSensor.setHeading(120,deg);
+  /*
+  arc(17,90,right);
+  toggleDescore();
+  Catapult.spinFor(fwd, 900, deg, false);
+  arc(17,-90,left); 
+  turnToHeading(90);
+  straight(-32);
+  */
+
+  
+  straight(15);
+  smartTurn(15);
+  toggleDescore();
+  wait(0.5, sec);
+  straight(-8);
+  smartTurn(-20);
+  Catapult.spinFor(fwd, 1100, deg, false);
+  wait(0.5,sec);
+  toggleDescore();
+  straight(-10);
+  wait(1, sec);
+  straight(2);
+  turnToHeading(90);
   straight(-18);
-  turnToHeading(180);
-  straight(-5);
-  straight(9);
-  turnToHeading(0);
-  toggleWings();
-  arc(12,-90,right);
-  //straight(2);
-  toggleWings();
-  //straight(4);
-  turnToHeading(270);
-  toggleBlocker();
-  straight(-30);
-  straight(-4,35);
+  straight(-10,25);
+  
 }
 void programmingSkills(void) {
   /*
@@ -1033,69 +1154,37 @@ void testing(void) {
   // rightGroup.stop();
 
 }
-/*
-std::string progAlignment[3][3] = {
-  {"Safe Opposite Side", "Cool Opposite Side", ""},
-  {"Safe Same Side", "Cool Same Side", ""},
-  {"Programming Skills", "", ""}
-};
-typedef void (*callback)();
-callback progs[3][3] = {
-  {oppositeSide, oppositeSideElim, testing},
-  {AWPSameSide, sameSide, testing},
-  {programmingSkills, testing, testing}
-};
-void autonSelection(void) { 
-  Brain.Screen.setPenColor(color::white);
-  
-  for (int i = 1; i <= 2; i ++) {
-      //this draws vertical lines. The X stays the same but the Y changes:
-      Brain.Screen.drawLine(160*(i),0,160*(i),240);
-      //this draws horizontal lines. The X changes but the Y stays the same:
-      Brain.Screen.drawLine(0,80*(i),480,80*(i));
-  }
-  
-  for(int x=0; x<3; x++) {
-    for(int y=0; y<3; y++) {
-      Brain.Screen.printAt(160*x + 80, 80*y + 40, progAlignment[y][x].c_str());
-    }
-  }
+void testHang(void) {
+  releaseIntake();
+  getHangReady();
+  straight(24);
+  Catapult.spinFor(reverse, 1500, deg);
 }
-void draw_touch() {
-    Brain.Screen.setPenColor(color::red);
-    //this draws a circle around the place the user is touching or last touched the LCD
-    Brain.Screen.drawCircle(Brain.Screen.xPosition(),Brain.Screen.yPosition(),30);
-}
-void draw_button(int x, int y, int w, int h, color color, char *text) {
-  Brain.Screen.setPenColor(color);
-  Brain.Screen.drawRectangle(x, y, w, h);
-  Brain.Screen.printAt(x+(w/2), y+(h/2), text);
-}
-*/
 void usercontrol(void) {
   std::uint32_t clock = sylib::millis();
-  // pre_auton();
+  pre_auton();
   Intake.setVelocity(100,pct);
   int deadband = 5;
   bool intakeMode = true;
   Controller1.ButtonB.pressed(toggleCata);
   Controller1.ButtonA.released(stopCata);
   Controller1.ButtonY.pressed(toggleWings);
-  Controller1.ButtonX.pressed(toggleBlocker);
+  Controller1.ButtonX.pressed(toggleDescore);
   Controller1.ButtonLeft.pressed(togglePTO);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   odom = vex::task(runOdom);
   //vex::task printCoords(printOdom);
+  /*
   auto block = sylib::Addrled(22,8,40);
-  BlockerLEDS = &block;
+  DescoreLEDS = &block;
   auto und1 = sylib::Addrled(22,7,14);
   Under1 = &und1;
   auto und2 = sylib::Addrled(22,6,13);
   Under2 = &und2;
   auto top = sylib::Addrled(22,5,23);
   Top = &top;
-  vex::task leds(handleLEDs);
-  currentPosition = {0,0};
+  vex::task leds(handleLEDs);*/
+  //currentPosition = {0,0};
   while (true) {
     //tank drive
     sylib::delay_until(&clock, 10);
@@ -1106,8 +1195,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * Controller1.Axis1.position());
-    int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * Controller1.Axis1.position());
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * 0.5 * Controller1.Axis1.position());
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * 0.5 * Controller1.Axis1.position());
 
     //cycle based on robot speed
     //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
@@ -1139,9 +1228,9 @@ void usercontrol(void) {
       // Single Catapult Cycle
       
     }
-    if (Controller1.ButtonR1.pressing()) {
+    if (Controller1.ButtonL1.pressing()) {
         Intake.spin(fwd, 100, pct);
-      } else if (Controller1.ButtonR2.pressing()) {
+      } else if (Controller1.ButtonL2.pressing()) {
           Intake.spin(reverse, 100, pct);
       }
       else {
@@ -1161,7 +1250,7 @@ void usercontrol(void) {
     Controller1.Screen.setCursor(0,0);
     Controller1.Screen.clearLine();
     Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
-    wait(0.05,sec);
+    wait(0.025,sec);
   }
 }
 void driverSkills(void) {
@@ -1188,15 +1277,16 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  //Competition.autonomous(programmingSkills);
-  Competition.autonomous(oppositeSide);
-  // Competition.autonomous(oppositeSideElim);
+  // Competition.autonomous(programmingSkills);
+  // Competition.autonomous(oppositeSide);
+  Competition.autonomous(oppositeSideUnsafe);
+  //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
-  Competition.autonomous(programmingSkills);
+  //Competition.autonomous(programmingSkills);
   // Competition.autonomous(testing);
   //if(Competition.isEnabled()) selectAuton();
-  Competition.drivercontrol(driverSkills);
   //Competition.drivercontrol(driverSkills);
+  Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
     /*
