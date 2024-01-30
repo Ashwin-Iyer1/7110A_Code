@@ -592,7 +592,7 @@ class RobotController {
 
       Vector2d current_position = getCurrentPosition();
       BezierSpline spline(current_position, middle_position, target_position);
-
+      spline.bake(10);
       Vector2d ogtan = spline.calculateTangent(0);
       turnToHeading(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + 270);
       Controller1.Screen.print(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + 90);
@@ -609,16 +609,11 @@ class RobotController {
       float i = 0;
       float eRec = 0;
       // Controller1.Screen.print("DOES THIS WORK");
-      double distance = sqrt((target_position.x-current_position.x)*(target_position.x-current_position.x) + (target_position.y-current_position.y)*(target_position.y-current_position.y));
       // Controller1.Screen.print("STILL WORKING");
       //wait(0.5,sec);
-      double splineLength = spline.approxLength(10);
       //wait(5,sec);
-      Controller1.Screen.clearLine();
-      Brain.Screen.print(splineLength);
       //wait(5,sec);
       double timeStep = 0.1;
-        double splinePos = 0.0;
         for (double desiredPoint=0; desiredPoint >= 0; desiredPoint = spline.intersectCircle(lookAhead,currentPosition.x,currentPosition.y)) {
           Vector2d tangent = spline.calculateTangent(desiredPoint);
           
@@ -641,9 +636,6 @@ class RobotController {
           //1 pct speed diff in 0.1 seconds = 0.3 degrees change
           double speed_difference = ki*i + kd*d + kp*e;
 
-          Controller1.Screen.clearLine();
-          Controller1.Screen.print("d: %.1f a: %.1f", distance, angle_difference);
-          Controller1.Screen.print(angle_difference);
           double left_speed = (direction == fwd) ? max_speed - speed_difference : max_speed+speed_difference;
           double right_speed = (direction == fwd) ? max_speed + speed_difference : max_speed-speed_difference;
 
@@ -658,7 +650,7 @@ class RobotController {
 
           Brain.Screen.newLine();
           //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
-          Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f", angle_difference, splinePos, angle, orientation, inertialSensor.heading(), currentPosition.x, currentPosition.y);
+          Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f, %.1f", angle_difference, angle, orientation, inertialSensor.heading(), currentPosition.x, currentPosition.y);
           // Move forward in time
 
           // Simulate robot movement (you may replace this with your actual motion control logic)
