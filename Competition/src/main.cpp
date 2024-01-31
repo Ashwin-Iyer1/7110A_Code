@@ -21,6 +21,8 @@
 #include <cmath>
 #include <map>
 #include <set>
+#include <bits/stdc++.h>
+#include <functional>
 
 using namespace vex;
 
@@ -66,6 +68,10 @@ float prevForwardRotation = 0;
 float prevSideRotation = 0;
 float orientation = 0;
 float orientationHeading = fmod(orientation+36000,360);
+void delayExecution(std::function<void()> function, float waitTime, vex::timeUnits timeUnit=msec) {
+  this_thread::sleep_for((timeUnit==msec) ? waitTime : waitTime/1000);
+  function();
+}
 struct Vector2d {
   double x, y;
   Vector2d() {
@@ -124,7 +130,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(fwd,100,pct);
+      Catapult.spin(fwd,80,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -806,33 +812,35 @@ void oppositeSideUnsafe(void) {
   //straight(-5);
   wait(0.5, sec);
   Intake.spin(fwd);   
-  straight(5, 35);
+  straight(19, 35);
   wait(1,sec);
   //pp stuff
-  straight(-26, 75);
+  straight(-40, 75);
   Intake.stop();
   toggleDescore();
   arc(15,-90,right);
   toggleDescore();
-  smartTurn(15);
+  simpleTurn(15);
   slam(reverse);
-  arc(14,150,right);
-  straight(26.5);
+  arc(15,150,right);
+  straight(32);
   turnToHeading(270);
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(19);
+  straight(22);
   Intake.stop();
-  straight(-12);
-  /*turnToHeading(70);
+  straight(-15);
+  turnToHeading(70);
   Intake.spin(fwd);
-  straight(36);
+  straight(24);
   Intake.stop();
+  simpleTurn(70);
+  straight(24);
   turnToHeading(270);
   toggleWings();
   slam(fwd);
   straight(-15);
-  toggleWings();*/
+  toggleWings();
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
