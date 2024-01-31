@@ -222,9 +222,9 @@ bool smartTurn(float rot) {
   float d = 0;
   float i = 0;
   float eRec = 0;
-  float kp = 0.5;
-  float kd = 0.05;
-  float ki = 0;
+  float kp = 0.4;
+  float kd = 0.03;
+  float ki = 0.03;
   float dt = 0.02;
   float t=0;
   double currAngle = inertialSensor.rotation(deg);
@@ -620,9 +620,9 @@ class RobotController {
       //wait(5,sec);
       //wait(5,sec);
       double timeStep = 0.1;
-        for (double desiredPoint=0; desiredPoint >= 0; desiredPoint = spline.intersectCircle(lookAhead,currentPosition.x,currentPosition.y)) {
+        for (double distance=currentPosition.distance(target_position); distance>=lookAhead; distance=currentPosition.distance(target_position)) {
+          double desiredPoint = spline.intersectCircle(lookAhead,currentPosition.x,currentPosition.y);
           Vector2d tangent = spline.calculateTangent(desiredPoint);
-          
           // Simple control logic: adjust left and right motor speeds based on tangent
           double angle = std::atan2(tangent.y, tangent.x); //angle of tangent vector in radians
           // Brain.Screen.print(angle);
