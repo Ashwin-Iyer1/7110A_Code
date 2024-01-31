@@ -130,7 +130,7 @@ int fullCataCycle() {
 void toggleCata() {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(fwd,80,pct);
+      Catapult.spin(fwd,65,pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -1226,7 +1226,9 @@ void usercontrol(void) {
       }
     } else {
       // Single Catapult Cycle
-      
+      if(Controller1.ButtonA.pressing()) {
+        Catapult.spin(fwd);
+      }
     }
     if (Controller1.ButtonL1.pressing()) {
         Intake.spin(fwd, 100, pct);
