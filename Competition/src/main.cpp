@@ -810,37 +810,48 @@ void oppositeSideUnsafe(void) {
   // score alliance triball to near net    
   vex::task run(releaseIntake);
   //straight(-5);
-  wait(0.5, sec);
+  wait(1, sec);
   Intake.spin(fwd);   
-  straight(19, 35);
+  straight(5, 35);
   wait(1,sec);
   //pp stuff
-  straight(-40, 75);
+  straight(-29, 75);
   Intake.stop();
   toggleDescore();
   arc(15,-90,right);
   toggleDescore();
   simpleTurn(15);
   slam(reverse);
-  arc(15,150,right);
-  straight(32);
-  turnToHeading(270);
+  straight(12);
+  smartTurn(180);
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(22);
-  Intake.stop();
-  straight(-15);
-  turnToHeading(70);
+  slam(fwd);
+  straight(-12);
+  turnToHeading(105);
   Intake.spin(fwd);
-  straight(24);
+  straight(48);
+  wait(0.5,sec);
   Intake.stop();
-  simpleTurn(70);
-  straight(24);
+  turnToHeading(180);
+  straight(18);
   turnToHeading(270);
+  Intake.spin(reverse);
   toggleWings();
+  wait(0.5,sec);
   slam(fwd);
   straight(-15);
   toggleWings();
+  turnToHeading(120);
+  Intake.spin(fwd);
+  straight(8);
+  wait(0.5,sec);
+  Intake.stop();
+  turnToHeading(270);
+  Intake.spin(reverse);
+  wait(0.5,sec);
+  slam(fwd);
+  straight(-15);
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
