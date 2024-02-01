@@ -1,10 +1,10 @@
 {
 	"project": {
-		"name": "magiopps",
+		"name": "Competition",
 		"slot": 1,
 		"description": "Competition Template V5 C++ Project",
 		"platform": "V5",
-		"creationDate": "Fri, 26 Jan 2024 14:30:13 GMT",
+		"creationDate": "Thu, 01 Feb 2024 14:30:52 GMT",
 		"language": "cpp",
 		"sdkVersion": "V5_20220726_10_00_00",
 		"cpp": {

@@ -33,30 +33,33 @@ vex::brain Brain;
 
 controller Controller1 = controller(primary);
 
-motor FrontLeft =             motor(PORT1, ratio6_1, true);
-motor MidLeft =               motor(PORT2, ratio6_1, true);
-motor BackLeft =              motor(PORT3, ratio6_1, true);
-motor FrontRight =            motor(PORT4, ratio6_1, false);
-motor MidRight =              motor(PORT5, ratio6_1, false);
-motor BackRight =             motor(PORT6, ratio6_1, false);
-motor Catapult1 =             motor(PORT10, ratio18_1, true);
-motor Catapult2 =             motor(PORT9, ratio18_1, false);
-motor Intake =                motor(PORT8, ratio18_1, true);
-inertial inertialSensor =  inertial(PORT20);
-rotation sideTracking =    rotation(PORT18);
-rotation forwardTracking = rotation(PORT19);
-pneumatics pto = pneumatics(Brain.ThreeWirePort.A);
-pneumatics Descore = pneumatics(Brain.ThreeWirePort.B);
-pneumatics Wings = pneumatics(Brain.ThreeWirePort.C);
+motor      FrontLeft =            motor(PORT1, ratio6_1, true);
+motor      MidLeft =              motor(PORT2, ratio6_1, true);
+motor      BackLeft =             motor(PORT3, ratio6_1, true);
+motor      FrontRight =           motor(PORT4, ratio6_1, false);
+motor      MidRight =             motor(PORT5, ratio6_1, false);
+motor      BackRight =            motor(PORT6, ratio6_1, false);
+motor      Catapult1 =            motor(PORT10, ratio18_1, true);
+motor      Catapult2 =            motor(PORT9, ratio18_1, false);
+motor      Intake =               motor(PORT8, ratio18_1, true);
 
-motor_group leftGroup = motor_group(FrontLeft, BackLeft, MidLeft);
+inertial   inertialSensor =    inertial(PORT20);
+rotation   sideTracking =      rotation(PORT18);
+rotation   forwardTracking =   rotation(PORT19);
+
+pneumatics pto =             pneumatics(Brain.ThreeWirePort.A);
+pneumatics Descore =         pneumatics(Brain.ThreeWirePort.B);
+pneumatics Wings =           pneumatics(Brain.ThreeWirePort.C);
+
+motor_group leftGroup =  motor_group(FrontLeft, BackLeft, MidLeft);
 motor_group rightGroup = motor_group(FrontRight, BackRight, MidRight);
-motor_group Catapult = motor_group(Catapult1, Catapult2);
+motor_group Catapult =   motor_group(Catapult1, Catapult2);
 
 sylib::Addrled* DescoreLEDS;
 sylib::Addrled* Under1;
 sylib::Addrled* Under2;
 sylib::Addrled* Top;
+
 float gearRatio = 36.0/48.0;
 float wheelDiameter = 3.25;
 float wheelRadius = wheelDiameter/2;
@@ -68,6 +71,7 @@ float prevForwardRotation = 0;
 float prevSideRotation = 0;
 float orientation = 0;
 float orientationHeading = fmod(orientation+36000,360);
+
 void delayExecution(std::function<void()> function, float waitTime, vex::timeUnits timeUnit=msec) {
   this_thread::sleep_for((timeUnit==msec) ? waitTime : waitTime/1000);
   function();
@@ -114,23 +118,26 @@ class OdomGyro: public rotation
 
 bool catatoggle = false;
 bool hang = !pto.value();
+
 void stopCata() {
     Catapult.stop();
 }
 
 void cataMatchLoad() {
 }
-int fullCataCycle() {
+
+int fullCataCycle(int cataSpeed=50) {
   if(!hang){
-    Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, 50, velocityUnits::pct, true);
+    Catapult.spinFor(directionType::fwd, 360, rotationUnits::deg, cataSpeed, velocityUnits::pct, true);
     stopCata();
   }
   return 1;
 }
-void toggleCata() {
+
+void toggleCata(int cataSpeed=65) {
   if(!hang) {
     if(!catatoggle) {
-      Catapult.spin(fwd,65,pct);
+      Catapult.spin(fwd, cataSpeed, pct);
       catatoggle = true;
     } else {
       stopCata();
@@ -138,27 +145,32 @@ void toggleCata() {
     }
   }
 }
+
 void toggleWings() {
   Wings.set(!Wings.value());
 }
+
 void toggleDescore() {
   Descore.set(!Descore.value());
-  
 }
+
 void togglePTO() {
   pto.set(!pto.value());
   hang = !hang;
 }
+
 int releaseIntake() {
   Catapult.spinFor(fwd,160, deg);
   wait(0.2,sec);
   Catapult.spinFor(reverse, 860, deg);
   return Catapult.position(deg);
 }
-int getHangReady() {
+
+int hangSetup() {
   Catapult.spinFor(fwd, 1500, deg);
   return Catapult.position(deg);
 }
+
 int handleLEDs() {
   bool prevDescore = Descore.value();
   bool idle = false;
@@ -193,11 +205,8 @@ int handleLEDs() {
       Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Top -> cycle(**Top, 10);
 
-
-
       Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Under1 -> cycle(**Under1, 10);
-
 
       Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Under2 -> cycle(**Under2, 10);
@@ -217,7 +226,7 @@ float rotToDist(float rot) {
   return (rot/360*(wheelDiameter * M_PI)) * gearRatio;
 }
 
-bool smartTurn(float rot) {
+bool smartTurn(float rot, float timeout=4) {
   float e = 0;
   float d = 0;
   float i = 0;
@@ -230,7 +239,7 @@ bool smartTurn(float rot) {
   double currAngle = inertialSensor.rotation(deg);
   double wantedAngle = currAngle + rot;
   e = wantedAngle-inertialSensor.rotation(deg);
-  while ((fabs(e) + fabs(d) > 2) && t<4) {
+  while ((fabs(e) + fabs(d) > 2) && t < timeout) {
     e = wantedAngle-inertialSensor.rotation(deg);
     d = (e-eRec)/dt;
     i += e*dt;
@@ -247,7 +256,8 @@ bool smartTurn(float rot) {
   rightGroup.stop();
   return true;
 }
-bool smartTurnOdom(float rot) {
+
+bool smartTurnOdom(float rot, float timeout=4) {
   float e = 0;
   float d = 0;
   float i = 0;
@@ -260,7 +270,7 @@ bool smartTurnOdom(float rot) {
   double currAngle = orientation;
   double wantedAngle = currAngle + rot;
   e = wantedAngle-orientation;
-  while ((fabs(e) > 2) && t<4) {
+  while ((fabs(e) > 2) && t<timeout) {
     e = wantedAngle-orientation;
     d = (e-eRec)/dt;
     i += e*dt;
@@ -277,7 +287,8 @@ bool smartTurnOdom(float rot) {
   rightGroup.stop();
   return true;
 }
-bool turnToHeading(float heading) {
+
+bool turnToHeading(float heading, float timeout=4) {
   float clockwiseRotation = heading-inertialSensor.heading();
   float closestPath = 0;
   if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
@@ -286,10 +297,11 @@ bool turnToHeading(float heading) {
   } else {
     closestPath = clockwiseRotation+360;
   }
-  smartTurn(closestPath);
+  smartTurn(closestPath, timeout);
   return true;
 }
-bool turnToHeadingOdom(float heading) {
+
+bool turnToHeadingOdom(float heading, float timeout=4) {
   float clockwiseRotation = heading-inertialSensor.heading();
   float closestPath = 0;
   if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
@@ -298,9 +310,10 @@ bool turnToHeadingOdom(float heading) {
   } else {
     closestPath = clockwiseRotation+360;
   }
-  smartTurnOdom(closestPath);
+  smartTurnOdom(closestPath, timeout);
   return true;
 }
+
 void odomUpdate() {
   float orientationDiff = -inertialSensor.rotation()-orientation;
   float radOrientationDiff = orientationDiff*M_PI/180;
@@ -321,20 +334,21 @@ void odomUpdate() {
     currentPosition.y += positionChange.y;
   }
 }
+
 int printOdom() {
   while(true);
   Controller1.Screen.clearLine();
-    Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
+  Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
     wait(100,msec);
 }
+
 int runOdom() {
   while(true) {
     odomUpdate();
-    // Controller1.Screen.newLine();
-    // Controller1.Screen.print("o: %.1f x: %.1f y: %.1f", orientationHeading, x, y);
     wait(15,msec);
   }
 }
+
 void straight(float dist, distanceUnits units) {
   if(units==distanceUnits::mm) {
     dist*=0.0393701;
@@ -352,17 +366,17 @@ void straight(float dist, distanceUnits units) {
   leftGroup.stop(brake);
   rightGroup.stop(brake);
 }
-void straight(float dist, float speed) {
+
+void straight(float dist, float speed=100) {
   leftGroup.setVelocity(speed,pct);
   rightGroup.setVelocity(speed,pct);
   straight(dist,distanceUnits::in);
 }
-void straight(float dist) {
-  straight(dist,100);
-}
-void backwards(float dist, float speed) {
+
+void backwards(float dist, float speed=100) {
   straight(-dist, speed);
 }
+
 //gives robot brain trauma
 void slam(directionType direction) {
   leftGroup.spin(direction, 100, pct);
@@ -374,6 +388,7 @@ void slam(directionType direction) {
   leftGroup.stop();
   rightGroup.stop();
 }
+
 void arc(float radius, float angle, turnType side) {
   float radAngle = angle/180*M_PI;
   float leftArc;
@@ -411,6 +426,7 @@ void arc(float radius, float angle, turnType side) {
   leftGroup.stop();
   rightGroup.stop();
 }
+
 //Currently inaccurate, will require tuning of driveRotationConstant
 void simpleTurn(float deg) {
   /*float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
@@ -424,9 +440,11 @@ bool moveToPoint(float xPos, float yPos) {
   return true;
 }
 */
+
 int factorial(int n) {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
+
 struct Robot {
   double left_motor_speed;
   double right_motor_speed;
@@ -1167,7 +1185,7 @@ void testing(void) {
 }
 void testHang(void) {
   releaseIntake();
-  getHangReady();
+  hangSetup();
   straight(24);
   Catapult.spinFor(reverse, 1500, deg);
 }
