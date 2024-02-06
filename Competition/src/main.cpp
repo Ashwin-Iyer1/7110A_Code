@@ -175,7 +175,8 @@ void togglePTO() {
 }
 
 int releaseIntake() {
-  Intake.spinFor(-1,rev,true);
+  Intake.spinFor(-1,rev,false);
+  Catapult.spinFor(reverse, 600, deg);
   return 1;
 }
 
@@ -406,13 +407,52 @@ void straight(float dist, float speed=80) {
 void backwards(float dist, float speed=100) {
   straight(-dist, speed);
 }
-
+void smartStraight(float dist) {
+  float rotation = distToRot(dist);
+  leftGroup.setVelocity(80,pct);
+  rightGroup.setVelocity(80,pct);
+  leftGroup.spinFor(fwd,rotation, deg, false);
+  rightGroup.spinFor(fwd, rotation,deg, false);
+  float turnkp = 0.8;
+  float turnkd = 0;
+  float turnki = 0;
+  float straightkp = 5;
+  float turne = 0;
+  float turneRec = 0;
+  float turnd = 0;
+  float turni = 0;
+  float straighte = 0;
+  float straighteRec = 0;
+  float straightd = 0;
+  float straighti = 0;
+  float dt = 0.025;
+  float currentRotation = inertialSensor.rotation();
+  float wantedMotorPosition = leftGroup.position(deg)+rotation;
+  for(double t=0; t<fabs(dist/20); t+=0.025) {
+    turne = inertialSensor.rotation() - currentRotation;
+    turni += turne*dt;
+    turnd = (turne-turneRec)/dt;
+    turneRec = turne;
+    straighte = wantedMotorPosition-leftGroup.position(deg);
+    straighti += straighte*dt;
+    straightd = (straighte-straighteRec)/dt;
+    straighteRec = straighte;
+    float speedDiff = turnkp*turne + turnkd*turnd + turnki*turni;
+    float speed = fmin(80,straightkp*straighte);
+    leftGroup.setVelocity(speed + speedDiff, pct);
+    rightGroup.setVelocity(speed - speedDiff, pct);
+    if(leftGroup.isDone() && rightGroup.isDone()) break;
+    wait(0.025,sec);
+  }
+  leftGroup.stop();
+  rightGroup.stop();
+}
 //gives robot brain trauma
 void slam(directionType direction) {
-  leftGroup.spin(direction, 100, pct);
-  rightGroup.spin(direction, 100, pct);
+  leftGroup.spin(direction, 80, pct);
+  rightGroup.spin(direction, 80, pct);
   wait(0.5,sec);
-  while (!((fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10))) {
+  while (!(/*(fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10) || */fabs(inertialSensor.acceleration(yaxis))>1)) {
     wait(5, msec);
   }
   leftGroup.stop();
@@ -456,7 +496,11 @@ void arc(float radius, float angle, turnType side) {
   leftGroup.stop();
   rightGroup.stop();
 }
-
+/*
+void moveToPoint(Vector2d point) {
+  turnToHeading(atan2())
+  smartStraight()
+}*/
 //Currently inaccurate, will require tuning of driveRotationConstant
 void simpleTurn(float deg) {
   /*float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
@@ -709,13 +753,15 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
   float d = 0;
   float i = 0;
   float eRec = 0;
+  float t = 0;
   // Controller1.Screen.print("DOES THIS WORK");
   // Controller1.Screen.print("STILL WORKING");
   //wait(0.5,sec);
   //wait(5,sec);
   //wait(5,sec);
   double timeStep = 0.2;
-    for (double distance=currentPosition.distance(*points.rbegin()); distance>=lookAhead; distance=currentPosition.distance(*points.rbegin())) {
+  double fullDistance = currentPosition.distance(*points.rbegin());
+    for (double distance=currentPosition.distance(*points.rbegin()); distance>=lookAhead && t<fullDistance/24 ; distance=currentPosition.distance(*points.rbegin())) {
       Vector2d desiredPoint = spline.calculatePoint(spline.intersectCircle(lookAhead,currentPosition.x,currentPosition.y));
       Vector2d tangent = {desiredPoint.x-currentPosition.x, desiredPoint.y-currentPosition.y};
       // Simple control logic: adjust left and right motor speeds based on tangent
@@ -739,7 +785,7 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
       
       //1 pct speed diff in 0.1 seconds = 0.3 degrees change
       double speed_difference = ki*i + kd*d + kp*e;
-      max_speed = fabs(55-1.8*fabs(speed_difference));
+      max_speed = fabs(55-2*fabs(speed_difference));
       double left_speed = (direction == fwd) ? max_speed - speed_difference : max_speed+speed_difference;
       double right_speed = (direction == fwd) ? max_speed + speed_difference : max_speed-speed_difference;
 
@@ -761,6 +807,7 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
       leftGroup.spin(direction);
       rightGroup.setVelocity(right_speed, pct);
       rightGroup.spin(direction);
+      t+=timeStep;
       wait(timeStep, sec);
     }
     //straight(lookAhead);
@@ -878,7 +925,7 @@ void oppositeSideUnsafe(void) {
   wait(0.25,sec);
   turnToHeading(88.5);
   wait(0.5,sec);
-  straight(-29, 60);
+  smartStraight(-29);
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
@@ -888,7 +935,7 @@ void oppositeSideUnsafe(void) {
   turnToHeading(30);
   arc(18, -30, right);
   slam(reverse);
-  straight(12);
+  smartStraight(12);
   //smartTurn(-25);
   //turnToHeading(0);
   turnToHeading(180);
@@ -898,10 +945,10 @@ void oppositeSideUnsafe(void) {
   straight(-17);
   turnToHeading(110);
   Intake.spin(fwd);
-  straight(44);
-  turnToHeading(170);
+  smartStraight(44);
+  turnToHeading(180);
   Intake.stop();
-  straight(25);
+  smartStraight(25);
   turnToHeading(270);
   Intake.spin(reverse);
   wait(0.25,sec);
@@ -1049,8 +1096,9 @@ void AWPSameSide(void) {
   straight(-3,20);
 }
 void programmingSkills(void) {
-  vex::task intake(releaseIntake);
-  togglePTO();
+  hang = false;
+  //vex::task intake(releaseIntake);
+  Intake.spinFor(reverse,1,rev,false);
   inertialSensor.setHeading(90,deg);
   inertialSensor.setRotation(90,deg);
   orientation = -90;
@@ -1060,27 +1108,81 @@ void programmingSkills(void) {
   turnToHeading(180);
   slam(reverse);
   straight(16);
-  turnToHeading(75);
+  turnToHeading(70);
   straight(-1);
   toggleDescore();
   toggleCata();
   float currentRotation = inertialSensor.rotation(deg);
   float currentHeading = inertialSensor.heading(deg);
   odom.suspend();
-  wait(30,sec);
+  wait(2,sec);
   toggleCata();
   toggleDescore();
+  togglePTO();
   inertialSensor.setRotation(currentRotation,deg);
   inertialSensor.setHeading(currentHeading,deg);
   odom.resume();
-  followBezier({ {23, -4}, { 121, 10 }, {144,34}});
+  turnToHeading(120);
+  straight(26);
+  turnToHeading(90);
+  straight(72);
+  turnToHeading(45);
+  straight(28);
+  turnToHeading(25);
+  straight(12);
+  straight(-8);
   turnToHeading(0);
-  straight(8);
+  straight(10);
   straight(-12);
-  followBezier({{84,12},{84,60}},reverse);
+  turnToHeading(285);
+  straight(48);
+  turnToHeading(260);
+  toggleDescore();
+  arc(150,10,left);
+  slam(reverse);
+  straight(6);
+  toggleDescore();
+  arc(70,25,right);
+  turnToHeading(270);
+  slam(reverse);
+  straight(6);
+  arc(70,25,right);
+  turnToHeading(180)
+  /*
+  followBezier({ {23, -4}, { 128, 17 }, {140,32}});
+  turnToHeading(0);
+  straight(12);
+  straight(-8);
+  straight(8);
+  straight(-8);
+  followBezier({{84,30},{84,60}});
+  straight(10);
   turnToHeading(260);
   toggleDescore();
   slam(reverse);
+  straight(5);
+  toggleDescore();
+  followBezier({{90,60},{84,96}});
+  straight(10);
+  turnToHeading(270);
+  toggleDescore();
+  slam(reverse);
+  straight(5);
+  toggleDescore();
+  followBezier({{86,78},{84,126}});
+  toggleDescore();
+  //followBezier({{96,96},{120,84}},reverse);
+  turnToHeading(315);
+  arc(70,-45,right);
+  straight(5);
+  toggleDescore();
+  // vturnToHeading(0);
+  Catapult.spinFor(fwd, 1500, deg, false);
+  followBezier({{120,132}});
+  turnToHeading(270);
+  straight(36);
+  Catapult.spinFor(reverse, 1500, deg, false);
+  */
   /*
   inertialSensor.setHeading(90,deg);
   
@@ -1402,9 +1504,9 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  // Competition.autonomous(programmingSkills);
+  Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideUnsafe);
+  //Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);
