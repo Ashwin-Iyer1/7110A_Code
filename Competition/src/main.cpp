@@ -1103,8 +1103,9 @@ void programmingSkills(void) {
   inertialSensor.setRotation(90,deg);
   orientation = -90;
   currentPosition = {36,12};
-  odom = task(runOdom);
-  followBezier({{18,18}, {8, 36}}, reverse);
+  //odom = task(runOdom);
+  //followBezier({{18,18}, {8, 36}}, reverse);
+  arc(17,90,left);
   turnToHeading(180);
   slam(reverse);
   straight(16);
@@ -1147,7 +1148,7 @@ void programmingSkills(void) {
   slam(reverse);
   straight(6);
   arc(70,25,right);
-  turnToHeading(180)
+  turnToHeading(180);
   /*
   followBezier({ {23, -4}, { 128, 17 }, {140,32}});
   turnToHeading(0);
