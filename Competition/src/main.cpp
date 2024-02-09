@@ -128,7 +128,7 @@ class OdomGyro: public rotation
 */
 
 bool catatoggle = false;
-bool hang = !pto.value();
+bool hang = true;
 
 void stopCata() {
     Catapult.stop();
@@ -169,14 +169,15 @@ void toggleDescore() {
 }
 
 void togglePTO() {
-  Catapult.spinFor(50,deg,25,velocityUnits::pct,false);
+  Catapult.spinFor(200,deg,25,velocityUnits::pct,false);
   pto.set(!pto.value());
   hang = !hang;
 }
 
 int releaseIntake() {
-  Intake.spinFor(-1,rev,false);
-  Catapult.spinFor(reverse, 600, deg);
+  //Intake.spinFor(-1,rev,false);
+  Catapult.spinFor(fwd, 300, deg);
+  Catapult.spinFor(reverse, 500, deg);
   return 1;
 }
 
@@ -302,7 +303,10 @@ bool smartTurnOdom(float rot, float timeout=4) {
   rightGroup.stop();
   return true;
 }
-
+void setInertial(float d) {
+  inertialSensor.setHeading(d, deg);
+  inertialSensor.setRotation(d, deg);
+}
 bool turnToHeading(float heading, float timeout=4) {
   float clockwiseRotation = heading-inertialSensor.heading();
   float closestPath = 0;
@@ -416,7 +420,7 @@ void smartStraight(float dist) {
   float turnkp = 0.8;
   float turnkd = 0;
   float turnki = 0;
-  float straightkp = 5;
+  float straightkp = 2.5;
   float turne = 0;
   float turneRec = 0;
   float turnd = 0;
@@ -452,7 +456,7 @@ void slam(directionType direction) {
   leftGroup.spin(direction, 80, pct);
   rightGroup.spin(direction, 80, pct);
   wait(0.5,sec);
-  while (!(/*(fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10) || */fabs(inertialSensor.acceleration(yaxis))>1)) {
+  while (!((fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10) || fabs(inertialSensor.acceleration(yaxis))>1)) {
     wait(5, msec);
   }
   leftGroup.stop();
@@ -507,6 +511,18 @@ void simpleTurn(float deg) {
   leftGroup.spinFor(fwd, dist, vex::deg, false);
   rightGroup.spinFor(reverse, dist, vex::deg, false);*/
   arc(0,deg,right);
+}
+bool simpleTurnToHeading(float heading) {
+  float clockwiseRotation = heading-inertialSensor.heading();
+  float closestPath = 0;
+  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
+    closestPath = clockwiseRotation;
+    if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
+  } else {
+    closestPath = clockwiseRotation+360;
+  }
+  simpleTurn(closestPath);
+  return true;
 }/*
 bool moveToPoint(float xPos, float yPos) {
   turnToHeading(-atanf((xPos-x)/(yPos-y))/M_PI*180);
@@ -868,8 +884,7 @@ int LEDRainbow() {
 void oppositeSide(void) {
 //odom = vex::task(runOdom);
   //orientation = -90;
-  inertialSensor.setHeading(90,deg); 
-  inertialSensor.setRotation(90, deg);
+  setInertial(90);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
@@ -886,7 +901,7 @@ void oppositeSide(void) {
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
-  arc(13,-70,right);
+  arc(13,-90,right);
   toggleDescore();
   //straight(-22);
   turnToHeading(30);
@@ -898,7 +913,7 @@ void oppositeSide(void) {
   turnToHeading(180);
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(15);
+  straight(17);
   straight(-17);
   turnToHeading(115);
   straight(38);
@@ -911,8 +926,7 @@ void oppositeSide(void) {
 void oppositeSideUnsafe(void) {
 //odom = vex::task(runOdom);
   //orientation = -90;
-  inertialSensor.setHeading(90,deg); 
-  inertialSensor.setRotation(90, deg);
+  setInertial(90);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
@@ -922,34 +936,57 @@ void oppositeSideUnsafe(void) {
   Intake.spin(fwd);  
   straight(3, 35);
   //pp stuff
-  wait(0.25,sec);
   turnToHeading(88.5);
-  wait(0.5,sec);
-  smartStraight(-29);
+  wait(0.25,sec);
+  straight(-29, 60);
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
-  arc(13,-70,right);
+  arc(13,-90,right);
   toggleDescore();
   //straight(-22);
   turnToHeading(30);
   arc(18, -30, right);
   slam(reverse);
-  smartStraight(12);
+  straight(10);
   //smartTurn(-25);
   //turnToHeading(0);
   turnToHeading(180);
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(15);
-  straight(-17);
-  turnToHeading(110);
+  straight(13);
+  straight(-13);
+  turnToHeading(110,0.5);
   Intake.spin(fwd);
   smartStraight(44);
-  turnToHeading(180);
+  turnToHeading(225);
+  Intake.spin(reverse);
+  wait(0.5,sec);
+  turnToHeading(170);
+  Intake.spin(fwd);
+  straight(24);
+  turnToHeading(90);
+  toggleDescore();
+  slam(reverse);
+  straight(12);
+  turnToHeading(270);
+  Intake.spin(reverse);
+  straight(12);
+  /*
+  //smartTurn(-25);
+  //simpleTurnToHeading(0);
+  turnToHeading(180, 1);
+  Intake.spin(reverse);
+  wait(0.5,sec);
+  straight(15);
+  straight(-17);
+  turnToHeading(110, 1);
+  Intake.spin(fwd);
+  smartStraight(44);
+  turnToHeading(180, 1);
   Intake.stop();
   smartStraight(25);
-  turnToHeading(270);
+  turnToHeading(270, 1);
   Intake.spin(reverse);
   wait(0.25,sec);
   toggleWings();
@@ -965,13 +1002,14 @@ void oppositeSideUnsafe(void) {
   Intake.spin(reverse);
   slam(fwd);
   straight(-15);
+  */
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
   // vex::task run(bringCataDown);
   Intake.setVelocity(100,pct);
   // score alliance triball to near net    
-  inertialSensor.setHeading(270,deg); 
+  setInertial(270);
   Intake.spin(fwd);   
   straight(3, 35);
   wait(0.5,sec);
@@ -1015,62 +1053,29 @@ void oppositeSideElim(void) {
   */
 }
 void sameSide(void) {
-  straight(-18);
-  releaseIntake();
-  //Intake.spin(fwd);
-  //vex::task run(LEDRainbow);
-  //vex::task run(bringCataDown);
-  //Intake.setVelocity(100,pct);
-  // score alliance triball to near net    
-  /*
-  inertialSensor.setHeading(180,deg); 
-  arc(110, 24, left);
-  toggleWings();
-  Intake.spin(reverse);
-  turnToHeading(270);
-  straight(-16);
+ //odom = vex::task(runOdom);
+  //orientation = -90;
+  setInertial(180);
+  //currentPosition = {58,132};
+  Intake.setVelocity(100,pct);
+  // score alliance triball to near net     
+  vex::task run(releaseIntake);
+  turnToHeading(193.5);
+  Intake.spin(fwd);
+  smartStraight(50);
+  wait(0.5,sec);
   Intake.stop();
-  arc(0,180,right);
-  turnToHeading(90);
-  slam(reverse);
-  toggleWings();
-  arc(13, 180, right);
-  straight(27);
-  turnToHeading(0);
-  toggleWings();
-  arc(16.5, -90, right);
-  toggleWings();
-  turnToHeading(315);
-  straight(-8);
+  smartStraight(-50);
   turnToHeading(270);
-  Descore.set(true);
-  straight(-22);
-  straight(-12,50);
-  smartTurn(20);*/
-  // straight(7.2);
-  // turnToHeading(90);
-  // straight(32);
-  // turnToHeading(0);
-  // Intake.spin(fwd);
-  // straight(24);
-  // wait(1,sec);
-  // turnToHeading(180);
-  // Intake.stop();
-  // straight(20);
-  // turnToHeading(225);
-  // straight(24);
-  // turnToHeading(135);
-  // straight(24);
-  // turnToHeading(90);
-  // Intake.spin(reverse);
-  // wait(1,sec);
-  // Intake.stop();
+  Intake.spin(reverse);
+  straight(-4);
+  straight(28);
+  straight(-4);
 }
 void AWPSameSide(void) {
 //odom = vex::task(runOdom);
   //orientation = -90;
-  inertialSensor.setHeading(90,deg); 
-  inertialSensor.setRotation(90, deg);
+  setInertial(90);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
@@ -1093,18 +1098,24 @@ void AWPSameSide(void) {
   straight(-10);
   turnToHeading(90);
   straight(-28,70);
+  toggleDescore();
   straight(-3,20);
+  smartTurn(20);
 }
+
 void programmingSkills(void) {
-  hang = false;
   //vex::task intake(releaseIntake);
-  Intake.spinFor(reverse,1,rev,false);
-  inertialSensor.setHeading(90,deg);
-  inertialSensor.setRotation(90,deg);
-  orientation = -90;
-  currentPosition = {36,12};
-  odom = task(runOdom);
-  followBezier({{18,18}, {8, 36}}, reverse);
+  //Intake.spinFor(reverse,1,rev,false);
+  setInertial(90);
+  //orientation = -90;
+  //currentPosition = {36,12};
+ //odom = task(runOdom);
+  //togglePTO();
+  //followBezier({{18,18}, {8, 36}}, reverse);
+  hang=false;
+  straight(30);
+  straight(-30);
+  arc(15,90,left);
   turnToHeading(180);
   slam(reverse);
   straight(16);
@@ -1115,15 +1126,14 @@ void programmingSkills(void) {
   float currentRotation = inertialSensor.rotation(deg);
   float currentHeading = inertialSensor.heading(deg);
   odom.suspend();
-  wait(2,sec);
+  wait(25,sec);
   toggleCata();
   toggleDescore();
   togglePTO();
-  inertialSensor.setRotation(currentRotation,deg);
-  inertialSensor.setHeading(currentHeading,deg);
+  setInertial(currentRotation);
   odom.resume();
   turnToHeading(120);
-  straight(26);
+  straight(24.5);
   turnToHeading(90);
   straight(72);
   turnToHeading(45);
@@ -1134,8 +1144,8 @@ void programmingSkills(void) {
   turnToHeading(0);
   straight(10);
   straight(-12);
-  turnToHeading(285);
-  straight(48);
+  turnToHeading(295);
+  straight(56);
   turnToHeading(260);
   toggleDescore();
   arc(150,10,left);
@@ -1146,8 +1156,22 @@ void programmingSkills(void) {
   turnToHeading(270);
   slam(reverse);
   straight(6);
+  toggleDescore();
   arc(70,25,right);
-  turnToHeading(180)
+  turnToHeading(0);
+  straight(25);
+  turnToHeading(300);
+  toggleDescore();
+  arc(50,-30,right);
+  slam(reverse);
+  straight(4);
+  toggleDescore();
+  Catapult.spinFor(fwd,1600,deg,false);
+  turnToHeading(0);
+  straight(48);
+  turnToHeading(270);
+  straight(36);
+  Catapult.spinFor(reverse,1600,deg);
   /*
   followBezier({ {23, -4}, { 128, 17 }, {140,32}});
   turnToHeading(0);
@@ -1340,8 +1364,7 @@ void programmingSkills(void) {
 void testing(void) {
   odom = vex::task(runOdom);
   orientation = -90;
-  inertialSensor.setHeading(90, deg);
-  inertialSensor.setRotation(90, deg);
+  setInertial(90);
   currentPosition = {12,36};
   
   // followPath({
@@ -1420,8 +1443,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * 0.5 * Controller1.Axis1.position());
-    int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * 0.5 * Controller1.Axis1.position());
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? -1 : 1) * 0.35 * Controller1.Axis1.position());
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * (Controller1.Axis3.position() + (intakeMode ? 1 : -1) * 0.35 * Controller1.Axis1.position());
 
     //cycle based on robot speed
     //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
@@ -1446,7 +1469,7 @@ void usercontrol(void) {
           Catapult.spin(fwd);
       } else if (Controller1.ButtonR2.pressing()) {
           Catapult.spin(directionType::rev);
-      } else {
+      } else if(!catatoggle){
           Catapult.stop();
       }
     } else {
@@ -1504,9 +1527,9 @@ int main() {
   // Run the pre-autonomous function.
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(programmingSkills);
+  // Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  //Competition.autonomous(oppositeSideUnsafe);
+  Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);
