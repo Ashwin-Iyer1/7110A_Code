@@ -1105,17 +1105,14 @@ void AWPSameSide(void) {
 
 void programmingSkills(void) {
   //vex::task intake(releaseIntake);
-  //Intake.spinFor(reverse,1,rev,false);
-  setInertial(90);
-  //orientation = -90;
-  //currentPosition = {36,12};
- //odom = task(runOdom);
-  //togglePTO();
+  Intake.spinFor(reverse,1,rev,false);
+  inertialSensor.setHeading(90,deg);
+  inertialSensor.setRotation(90,deg);
+  orientation = -90;
+  currentPosition = {36,12};
+  //odom = task(runOdom);
   //followBezier({{18,18}, {8, 36}}, reverse);
-  hang=false;
-  straight(30);
-  straight(-30);
-  arc(15,90,left);
+  arc(17,90,left);
   turnToHeading(180);
   slam(reverse);
   straight(16);
