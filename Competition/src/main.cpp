@@ -101,6 +101,12 @@ struct Vector2d {
   double distance(Vector2d other) {
     return sqrt(pow(x-other.x,2) + pow(y-other.y,2));
   }
+  Vector2d operator+(const Vector2d& other) {
+    return {this->x+other.x, this->y+other.y};
+  }
+  Vector2d operator-(const Vector2d& other) {
+    return {this->x-other.x, this->y-other.y};
+  }
   double operator*(const Vector2d& other) {
     return this->x * other.x + this->y * other.y;
   }
@@ -679,9 +685,8 @@ class BezierCurve {
   }
 };
 class ApproxBezierCurve {
-  protected:
-    std::vector<Vector2d> curvePoints;
   public:
+    std::vector<Vector2d> curvePoints;
     ApproxBezierCurve(std::vector<Vector2d> points) {
       double approxLength = (*points.begin()).distance(*points.rbegin());
       BezierCurve bc(points);
@@ -748,6 +753,8 @@ class BoomerangBezier : public ApproxBezierCurve {
 void followApproxBezier(std::vector<Vector2d> points, vex::directionType direction = fwd, double lookAhead = 18) {
   points.insert(points.begin(),currentPosition);
   ApproxBezierCurve spline(points);
+  Vector2d ogtan = spline.curvePoints.at(1)-spline.curvePoints.at(0);
+  turnToHeading(fmod(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + (direction==fwd ? 90 : 270),360),0.5);
   double fullDistance = currentPosition.distance(*points.rbegin());
   double timeStep=0.05;
   double t=0;
@@ -822,6 +829,8 @@ void followApproxBezier(std::vector<Vector2d> points, double heading, vex::direc
   points.insert(points.begin(),currentPosition);
   heading = heading*M_PI/180;
   BoomerangBezier spline(points, (direction==fwd ? heading+M_PI/2 : heading-M_PI/2));
+  Vector2d ogtan = spline.curvePoints.at(1)-spline.curvePoints.at(0);
+  turnToHeading(fmod(-atan2(ogtan.y, ogtan.x) / M_PI * 180 + (direction==fwd ? 90 : 270),360),0.5);
   double fullDistance = currentPosition.distance(*points.rbegin());
   double timeStep=0.05;
   double t=0;
