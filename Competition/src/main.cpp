@@ -1700,6 +1700,64 @@ void roomba(void) {
     MotionController::slam(fwd)
   });
 }
+<<<<<<< HEAD
+void progBeginning() {
+  hang = false;
+  //vex::task intake(releaseIntake);
+  inertialSensor.setHeading(90,deg);
+  inertialSensor.setRotation(90,deg);
+  orientation = -90;
+  //odom = task(runOdom);
+  currentPosition = {36,12};
+  MotionController::chain({
+    MotionController::arc(18,90,left),
+    MotionController::straight(reverse,0.5)
+  });
+  MotionController::chain({
+    MotionController::turnToHeading(180,0.25),
+    MotionController::straight(10.5,80,180),
+    MotionController::turnToHeading(74)
+  });
+  MotionController::run(MotionController::straight(-2));
+  toggleDescore();
+  toggleCata();
+  Intake.spin(fwd, 100, pct); // stop double posession
+  float currentRotation = inertialSensor.rotation(deg);
+  float currentHeading = inertialSensor.heading(deg);
+  vex::wait(26,sec);
+  //vex::wait(26, sec);
+  toggleCata();
+  Intake.stop();
+  toggleDescore();
+  togglePTO();
+  //move to other side of field and push side in
+  MotionController::chain({
+    MotionController::turnToHeading(315, 1),
+    //MotionController::straight(-19.5),
+    //MotionController::swingToHeading(right,270),
+    MotionController::straight(-28),
+    MotionController::turnToHeading(270, 1),
+    MotionController::straight(-62),
+    MotionController::swingToHeading(right,235,fwd,0.75),
+    MotionController::straight(-15),
+    MotionController::swingToHeading(right,180,fwd,0.75),
+    MotionController::straight(reverse,0.5),
+    MotionController::straight(6,80,180),
+    MotionController::turnToHeading(170,0.5),
+    MotionController::straight(reverse,0.75,msec,180),
+    MotionController::turnToHeading(180, 0.5),
+    MotionController::straight(12)
+  });
+  MotionController::chain({
+    MotionController::swingToHeading(right,115, fwd, 1),
+    MotionController::straight(-25),
+    MotionController::swingToHeading(left,245, fwd, 1),
+    toggleDescore,
+    MotionController::arc(25,25,left),
+  });
+}
+=======
+>>>>>>> 753d2e791beba23404125cfa36c38a3204348c49
 void programmingSkills(void) {
   hang = false;
   //vex::task intake(releaseIntake);
@@ -1720,6 +1778,39 @@ void programmingSkills(void) {
   MotionController::run(MotionController::straight(-2));
   toggleDescore();
   toggleCata();
+<<<<<<< HEAD
+  Intake.spin(fwd, 100, pct); // stop double posession
+  float currentRotation = inertialSensor.rotation(deg);
+  float currentHeading = inertialSensor.heading(deg);
+  vex::wait(26,sec);
+  //vex::wait(26, sec);
+  toggleCata();
+  Intake.stop();
+  toggleDescore();
+  togglePTO();
+  //move to other side of field and push side in
+  MotionController::chain({
+    MotionController::turnToHeading(315, 1),
+    //MotionController::straight(-19.5),
+    //MotionController::swingToHeading(right,270),
+    MotionController::straight(-28),
+    MotionController::turnToHeading(270, 1),
+    MotionController::straight(-62),
+    MotionController::swingToHeading(right,235,fwd,0.75),
+    MotionController::straight(-15),
+    MotionController::swingToHeading(right,180,fwd,0.75),
+    MotionController::straight(reverse,0.5),
+    MotionController::straight(6,80,180),
+    MotionController::turnToHeading(170,0.5),
+    MotionController::straight(reverse,0.75,msec,180),
+    MotionController::turnToHeading(180, 0.5),
+    MotionController::straight(12)
+  });
+  MotionController::chain({
+    MotionController::swingToHeading(right,115, fwd, 1),
+    MotionController::straight(-25),
+    MotionController::swingToHeading(left,245, fwd, 1),
+=======
   float currentRotation = inertialSensor.rotation(deg);
   float currentHeading = inertialSensor.heading(deg);
   vex::wait(26,sec);
@@ -1744,6 +1835,7 @@ void programmingSkills(void) {
     MotionController::swingToHeading(right,115),
     MotionController::straight(-20),
     MotionController::swingToHeading(left,245),
+>>>>>>> 753d2e791beba23404125cfa36c38a3204348c49
     toggleDescore,
     MotionController::arc(25,25,left),
     MotionController::straight(reverse,1)
@@ -1751,21 +1843,39 @@ void programmingSkills(void) {
   MotionController::chain({
     MotionController::straight(4),
     toggleDescore,
+<<<<<<< HEAD
+    MotionController::turnToHeading(90, 0.5),
+    MotionController::straight(-8),
+    MotionController::swing(left,200),
+=======
     MotionController::turnToHeading(90),
     MotionController::straight(-8),
     MotionController::swing(left,180),
+>>>>>>> 753d2e791beba23404125cfa36c38a3204348c49
     toggleDescore,
     MotionController::straight(reverse,1.5)
   });
   MotionController::chain({
     MotionController::arc(40,45,right),
     toggleDescore,  
+<<<<<<< HEAD
+    MotionController::swingToHeading(right,90, fwd, 1),
+    MotionController::straight(40),
+    MotionController::swingToHeading(right,0, fwd, 1),
+    MotionController::straight(-4),
+    MotionController::straight(fwd,1)
+  });
+
+  //hang
+  /*
+=======
     MotionController::swingToHeading(right,90),
     MotionController::straight(40),
     MotionController::swingToHeading(right,0),
     MotionController::straight(-4),
     MotionController::straight(fwd,1)
   });
+>>>>>>> 753d2e791beba23404125cfa36c38a3204348c49
   MotionController::chain({
     MotionController::swingToHeading(left,315,fwd,0.5),
     MotionController::straight(27.5),
@@ -1773,6 +1883,10 @@ void programmingSkills(void) {
     MotionController::straight(40)
   });
   vex::task gaming(sideHang);
+<<<<<<< HEAD
+  */
+=======
+>>>>>>> 753d2e791beba23404125cfa36c38a3204348c49
 }
 void testing(void) {
   odom = vex::task(runOdom);
@@ -1847,6 +1961,7 @@ void usercontrol(void) {
   Top = &top;
   vex::task leds(handleLEDs);*/
   //currentPosition = {0,0};
+  progBeginning();
   while (true) {
     //tank drive
     sylib::delay_until(&clock, 10);
