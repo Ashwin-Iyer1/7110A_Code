@@ -1760,8 +1760,6 @@ void programmingSkills(void) {
   MotionController::chain({
     MotionController::arc(40,45,right),
     toggleDescore,  
-    MotionController::swingToHeading(right,0),
-    MotionController::straight(4),
     MotionController::swingToHeading(right,90),
     MotionController::straight(40),
     MotionController::swingToHeading(right,0),
