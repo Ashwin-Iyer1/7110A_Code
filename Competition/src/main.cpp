@@ -8,6 +8,7 @@
 /*----------------------------------------------------------------------------*/
 
 #include "vex.h"
+#include "robot_config.h"
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -23,58 +24,9 @@
 #include <set>
 #include <bits/stdc++.h>
 #include <functional>
+#include "7110A-Template/chassis.h"
 
 using namespace vex;
-
-// A global instance of competition
-competition Competition;
-
-vex::brain Brain;
-
-controller Controller1 = controller(primary);
-
-motor      FrontLeft =            motor(PORT1, ratio6_1, true);
-motor      MidLeft =              motor(PORT2, ratio6_1, true);
-motor      BackLeft =             motor(PORT7, ratio6_1, true);
-motor      FrontRight =           motor(PORT4, ratio6_1, false);
-motor      MidRight =             motor(PORT5, ratio6_1, false);
-motor      BackRight =            motor(PORT17, ratio6_1, false);
-motor      Catapult1 =            motor(PORT10, ratio18_1, true);
-motor      Catapult2 =            motor(PORT9, ratio18_1, false);
-motor      Intake =               motor(PORT8, ratio18_1, true);
-
-inertial   inertialSensor =    inertial(PORT20);
-rotation   sideTracking =      rotation(PORT19);
-rotation   forwardTracking =   rotation(PORT6);
-//rotation   hangSensor =        rotation(PORT14);
-
-pneumatics pto =             pneumatics(Brain.ThreeWirePort.A);
-pneumatics Descore =         pneumatics(Brain.ThreeWirePort.B);
-pneumatics Wings =           pneumatics(Brain.ThreeWirePort.C);
-
-motor_group leftGroup =  motor_group(FrontLeft, BackLeft, MidLeft);
-motor_group rightGroup = motor_group(FrontRight, BackRight, MidRight);
-motor_group Catapult =   motor_group(Catapult1, Catapult2);
-
-sylib::Addrled* DescoreLEDS;
-sylib::Addrled* Under1;
-sylib::Addrled* Under2;
-sylib::Addrled* Under3;
-sylib::Addrled* Under4;
-sylib::Addrled* Top;
-
-float gearRatio = 36.0/48.0;
-float wheelDiameter = 3.25;
-float wheelRadius = wheelDiameter/2;
-float robotRadius = 5.75;
-float drivetrainWidth = 11.5;
-float sideWheelDist = -7.75;
-float forwardWheelDist = 0.42;
-float prevForwardRotation = 0;
-float prevSideRotation = 0;
-float orientation = 0;
-float orientationHeading = fmod(orientation+36000,360);
-
 typedef struct _delayedFunction {
     std::function<void()> function;
     float waitTime;
@@ -193,46 +145,6 @@ int releaseIntake() {
   return 1;
 }
 
-// int hangSetup() {
-//   Catapult.spin(fwd,100,pct);
-//   waitUntil(hangSensor.position(deg)>786);
-//   Catapult.stop();
-//   return 1;
-// }
-// int sideHang() {
-//   Catapult.spin(reverse,100,pct);
-//   waitUntil(hangSensor.position(deg)<210);
-//   Catapult.stop();
-//   return 1;
-// }
-/*
-int handleLEDs() {
-      Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      Top -> cycle(**Top, 10);
-      Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      Under1 -> cycle(**Under1, 10);
-      Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      Under2 -> cycle(**Under2, 10);
-      Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      Under3 -> cycle(**Under3, 10);
-      Under4 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      Under4 -> cycle(**Under4, 10);
-  while(false) {
-      //DescoreLEDS->set_all(0x000000);
-      // Under3->set_all(0xFF00FF);
-      // Under1->set_all(0xFF00FF);
-      // Under2->set_all(0xFF00FF);
-      // Under4->set_all(0xFF00FF);
-      // DescoreLEDS -> gradient(0x600000, 0x600002, 0, 0, false, true);
-      // DescoreLEDS -> cycle(**DescoreLEDS, 10);
-
-      // Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-      // Under3 -> cycle(**Under3, 10);
-      
-    wait(50,msec);
-  }
-  return 1;
-}*/
 int endgameLEDHandler() {
   Top->gradient(0xFF0000,0x0000FF);
   Under1->gradient(0xFF0000,0x0000FF);
@@ -274,113 +186,15 @@ void endgameWarning() {
 }
 vex::task odom;
 
-float distToRot(float dist) {
-  return (dist/(wheelDiameter * M_PI)*360) / gearRatio;
-}
-float rotToDist(float rot) {
-  return (rot/360*(wheelDiameter * M_PI)) * gearRatio;
-}
-
-bool smartTurn(float rot, float timeout=4) {
-  float e = 0;
-  float d = 0;
-  float i = 0;
-  float eRec = 0;
-  float kp = 0.285;
-  float kd = 0.0225;
-  float ki = 0.10;
-  float dt = 0.02;
-  float t=0;
-  double currAngle = inertialSensor.rotation(deg);
-  double wantedAngle = currAngle + rot;
-  e = wantedAngle-inertialSensor.rotation(deg);
-  while (((fabs(e) > 2) || fabs(d) > 20) && t < timeout) {
-    e = wantedAngle-inertialSensor.rotation(deg);
-    d = (e-eRec)/dt;
-    if(e*eRec < 0) i=0;
-    i += e*dt;
-    t+=dt;
-    eRec = e;
-    float speed = kp*e + kd*d + ki*i;
-    leftGroup.setVelocity(speed,pct);
-    rightGroup.setVelocity(-speed,pct);
-    leftGroup.spin(fwd);
-    rightGroup.spin(fwd);
-    wait(dt,sec);
-  }
-  leftGroup.stop();
-  rightGroup.stop();
-  return true;
-}
-
-bool smartTurnOdom(float rot, float timeout=4) {
-  float e = 0;
-  float d = 0;
-  float i = 0;
-  float eRec = 0;
-  float kp = 0.375;
-  float kd = 0.025;
-  float ki = 0;
-  float dt = 0.02;
-  float t=0;
-  double currAngle = orientation;
-  double wantedAngle = currAngle + rot;
-  e = wantedAngle-orientation;
-  while ((fabs(e) > 2) && t<timeout) {
-    e = wantedAngle-orientation;
-    d = (e-eRec)/dt;
-    i += e*dt;
-    t+=dt;
-    eRec = e;
-    float speed = kp*e + kd*d + ki*i;
-    leftGroup.setVelocity(speed,pct);
-    rightGroup.setVelocity(-speed,pct);
-    leftGroup.spin(fwd);
-    rightGroup.spin(fwd);
-    wait(dt,sec);
-  }
-  leftGroup.stop();
-  rightGroup.stop();
-  return true;
-}
-void setInertial(float d) {
-  inertialSensor.setHeading(d, deg);
-  inertialSensor.setRotation(d, deg);
-}
-bool turnToHeading(float heading, float timeout=4) {
-  float clockwiseRotation = heading-inertialSensor.heading();
-  float closestPath = 0;
-  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
-    closestPath = clockwiseRotation;
-    if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
-  } else {
-    closestPath = clockwiseRotation+360;
-  }
-  smartTurn(closestPath, timeout);
-  return true;
-}
-
-bool turnToHeadingOdom(float heading, float timeout=4) {
-  float clockwiseRotation = heading-inertialSensor.heading();
-  float closestPath = 0;
-  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
-    closestPath = clockwiseRotation;
-    if(fabs(clockwiseRotation-360) < (closestPath)) closestPath-=360;
-  } else {
-    closestPath = clockwiseRotation+360;
-  }
-  smartTurnOdom(closestPath, timeout);
-  return true;
-}
 
 void odomUpdate() {
-  float orientationDiff = -inertialSensor.rotation()-orientation;
+  float orientationDiff = -Chassis::inertialSensor.rotation()-orientation;
   float radOrientationDiff = orientationDiff*M_PI/180;
   float radOrientation = orientation/180*M_PI;
-  orientation = -inertialSensor.rotation();
+  orientation = -Chassis::inertialSensor.rotation();
   orientationHeading = fmod(orientation+36000,360);
-  float forwardDiff = ((forwardTracking.position(deg)-prevForwardRotation)/360*(wheelDiameter * M_PI));
-  float sideDiff = -((sideTracking.position(deg)-prevSideRotation)/360*(wheelDiameter * M_PI));
+  float forwardDiff = ((forwardTracking.position(deg)-prevForwardRotation)/360*(Chassis::wheelDiameter * M_PI));
+  float sideDiff = -((sideTracking.position(deg)-prevSideRotation)/360*(Chassis::wheelDiameter * M_PI));
   prevForwardRotation = forwardTracking.position(deg);
   prevSideRotation = sideTracking.position(deg);
   //Brain.Screen.newLine();
@@ -399,7 +213,7 @@ void odomUpdate() {
 int printOdom() {
   while(true);
   Controller1.Screen.clearLine();
-  Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation());
+  Controller1.Screen.print("%.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -Chassis::inertialSensor.rotation());
     wait(100,msec);
 }
 
@@ -410,180 +224,11 @@ int runOdom() {
   }
 }
 
-void straight(float dist, distanceUnits units, float speed) {
-  if(units==distanceUnits::mm) {
-    dist*=0.0393701;
-  }
-  if(units==distanceUnits::cm) {
-    dist*=0.393701;
-  }
-  float rotation = distToRot(dist);
-  leftGroup.setVelocity(speed,pct);
-  rightGroup.setVelocity(speed,pct);
-  leftGroup.spinFor(fwd,rotation, deg, false);
-  rightGroup.spinFor(fwd, rotation,deg, false);
-  float kp = 0.8;
-  float kd = 0;
-  float ki = 0;
-  float e = 0;
-  float eRec = 0;
-  float d = 0;
-  float i = 0;
-  float dt = 0.025;
-  float currentRotation = inertialSensor.rotation();
-  for(double t=0; t<fabs(dist/20); t+=0.025) {
-    e = inertialSensor.rotation() - currentRotation;
-    i += e*dt;
-    d = (e-eRec)/dt;
-    eRec = e;
-    float speedDiff = kp*e + kd*d + ki*i;
-    leftGroup.setVelocity(speed + speedDiff, pct);
-    rightGroup.setVelocity(speed - speedDiff, pct);
-    if(leftGroup.isDone() && rightGroup.isDone()) break;
-    wait(0.025,sec);
-  }
-  leftGroup.stop(coast);
-  rightGroup.stop(coast);
-}
-
-void straight(float dist, float speed=80) {
-  straight(dist,distanceUnits::in, speed);
-}
-
-void backwards(float dist, float speed=100) {
-  straight(-dist, speed);
-}
-void smartStraight(float dist) {
-  float rotation = distToRot(dist);
-  leftGroup.setVelocity(80,pct);
-  rightGroup.setVelocity(80,pct);
-  leftGroup.spin(fwd);
-  rightGroup.spin(fwd);
-  float turnkp = 0.8;
-  float turnkd = 0;
-  float turnki = 0;
-  float straightkp = 0.5;
-  float turne = 0;
-  float turneRec = 0;
-  float turnd = 0;
-  float turni = 0;
-  float straighte = 0;
-  float straighteRec = 0;
-  float straightd = 0;
-  float straighti = 0;
-  float dt = 0.025;
-  float currentRotation = inertialSensor.rotation();
-  float wantedMotorPosition = leftGroup.position(deg)+rotation;
-  for(double t=0; t<fabs(dist/20) && leftGroup.position(deg)<wantedMotorPosition; t+=0.025) {
-    turne = inertialSensor.rotation() - currentRotation;
-    turni += turne*dt;
-    turnd = (turne-turneRec)/dt;
-    turneRec = turne;
-    straighte = wantedMotorPosition-leftGroup.position(deg);
-    straighti += straighte*dt;
-    straightd = (straighte-straighteRec)/dt;
-    straighteRec = straighte;
-    float speedDiff = turnkp*turne + turnkd*turnd + turnki*turni;
-    float speed = fmin(80,straightkp*straighte);
-    leftGroup.setVelocity(speed + speedDiff, pct);
-    rightGroup.setVelocity(speed - speedDiff, pct);
-    //if(leftGroup.isDone() && rightGroup.isDone()) break;
-    wait(0.025,sec);
-  }
-  leftGroup.stop(coast);
-  rightGroup.stop(coast);
-}
-//gives robot brain trauma
-void slam(directionType direction) {
-  leftGroup.spin(direction, 80, pct);
-  rightGroup.spin(direction, 80, pct);
-  wait(0.5,sec);
-  while (!((fabs(leftGroup.velocity(pct))<10 || fabs(rightGroup.velocity(pct))<10) || fabs(inertialSensor.acceleration(yaxis))>1)) {
-    wait(5, msec);
-  }
-  leftGroup.stop();
-  rightGroup.stop();
-}
-
-void arc(float radius, float angle, turnType side) {
-  float radAngle = angle/180*M_PI;
-  float leftArc;
-  float rightArc;
-  float leftspeed;
-  float rightspeed;
-  if(side==right) {
-    leftArc = (radius+drivetrainWidth/2)*radAngle;
-    rightArc = (radius-drivetrainWidth/2)*radAngle;
-  } else {
-    leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
-    rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
-  }
-  leftspeed = sqrtf(fabs(leftArc/rightArc));
-  rightspeed = sqrtf(fabs(rightArc/leftArc));
-  if(leftspeed >rightspeed)
-    {
-      rightspeed = rightspeed/leftspeed;
-      leftspeed=1;
-  }else{
-    leftspeed = leftspeed/rightspeed;
-    rightspeed=1;
-  }
-  
-  leftGroup.setVelocity(leftspeed * 55,pct);
-  rightGroup.setVelocity(rightspeed * 55,pct);
-  leftGroup.spinFor(distToRot(leftArc), deg, false);
-  rightGroup.spinFor(distToRot(rightArc), deg, false);
-  wait(0.5,sec);
-  for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
-    if(leftGroup.isDone() && rightGroup.isDone()) break;
-    wait(0.025,sec);
-  }
-  //wait(1,sec);
-  leftGroup.stop(coast);
-  rightGroup.stop(coast);
-}
-/*
-void moveToPoint(Vector2d point) {
-  turnToHeading(atan2())
-  smartStraight()
-}*/
-//Currently inaccurate, will require tuning of driveRotationConstant
-void simpleTurn(float deg) {
-  /*float dist = driveRotationConstant * gearRatio * deg * robotRadius / wheelRadius;
-  leftGroup.spinFor(fwd, dist, vex::deg, false);
-  rightGroup.spinFor(reverse, dist, vex::deg, false);*/
-  arc(0,deg,right);
-}
-bool simpleTurnToHeading(float heading) {
-  float clockwiseRotation = heading-inertialSensor.heading();
-  float closestPath = 0;
-  if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
-    closestPath = clockwiseRotation;
-    if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
-  } else {
-    closestPath = clockwiseRotation+360;
-  }
-  simpleTurn(closestPath);
-  return true;
-}/*
-bool moveToPoint(float xPos, float yPos) {
-  turnToHeading(-atanf((xPos-x)/(yPos-y))/M_PI*180);
-  straight(sqrtf(pow(xPos-x,2) + pow(yPos-y,2)));
-  return true;
-}
-*/
 
 int factorial(int n) {
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
-
-struct Robot {
-  double left_motor_speed;
-  double right_motor_speed;
-  double calcLinearSpeed(float pct) {
-    return 55;
-  }
-};
+using namespace Chassis;
 namespace PascalTriangle {
   std::vector<std::vector<int>> coefficients;
   static void generateCoefficients(int degree) {
@@ -827,8 +472,8 @@ void followApproxBezier(std::vector<Vector2d> points, vex::directionType directi
       //double speed_difference = ki*i + kd*d + kp*e;
 
       double avg_speed = fabs(50-15*sqrt(fabs(curvature)));
-      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(drivetrainWidth))/2 : avg_speed*(2-curvature*(drivetrainWidth))/2;
-      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(drivetrainWidth))/2 : avg_speed*(2+curvature*(drivetrainWidth))/2;
+      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2;
+      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2;
       //max_speed = fabs(80-4*fabs(speed_difference));
       //double left_speed = (direction == fwd) ? max_speed-speed_difference : max_speed+speed_difference;
       //double right_speed = (direction == fwd) ? max_speed+speed_difference : max_speed-speed_difference;
@@ -845,8 +490,8 @@ void followApproxBezier(std::vector<Vector2d> points, vex::directionType directi
       //Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", desiredPoint.x, desiredPoint.y, x, side, theta);
       // Move forward in time
       
-      leftGroup.spin(direction,left_speed,pct);
-      rightGroup.spin(direction,right_speed,pct);
+      Chassis::leftGroup.spin(direction,left_speed,pct);
+      Chassis::rightGroup.spin(direction,right_speed,pct);
       t+=timeStep;
       wait(timeStep, sec);
     }
@@ -905,8 +550,8 @@ void followApproxBezier(std::vector<Vector2d> points, double heading, vex::direc
       //double speed_difference = ki*i + kd*d + kp*e;
 
       double avg_speed = fabs(60-35*sqrt(fabs(curvature)));
-      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(drivetrainWidth))/2 : avg_speed*(2-curvature*(drivetrainWidth))/2;
-      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(drivetrainWidth))/2 : avg_speed*(2+curvature*(drivetrainWidth))/2;
+      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2;
+      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2;
       //max_speed = fabs(80-4*fabs(speed_difference));
       //double left_speed = (direction == fwd) ? max_speed-speed_difference : max_speed+speed_difference;
       //double right_speed = (direction == fwd) ? max_speed+speed_difference : max_speed-speed_difference;
@@ -923,8 +568,8 @@ void followApproxBezier(std::vector<Vector2d> points, double heading, vex::direc
       //Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", desiredPoint.x, desiredPoint.y, x, side, theta);
       // Move forward in time
       
-      leftGroup.spin(direction,left_speed,pct);
-      rightGroup.spin(direction,right_speed,pct);
+      Chassis::leftGroup.spin(direction,left_speed,pct);
+      Chassis::rightGroup.spin(direction,right_speed,pct);
       t+=timeStep;
       wait(timeStep, sec);
     }
@@ -998,8 +643,8 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
       //double speed_difference = ki*i + kd*d + kp*e;
 
       double avg_speed = fabs(50-25*sqrt(fabs(curvature)));
-      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(drivetrainWidth))/2 : avg_speed*(2-curvature*(drivetrainWidth))/2;
-      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(drivetrainWidth))/2 : avg_speed*(2+curvature*(drivetrainWidth))/2;
+      double left_speed = (direction == fwd) ? avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2;
+      double right_speed = (direction == fwd) ? avg_speed*(2-curvature*(Chassis::drivetrainWidth))/2 : avg_speed*(2+curvature*(Chassis::drivetrainWidth))/2;
       //max_speed = fabs(80-4*fabs(speed_difference));
       //double left_speed = (direction == fwd) ? max_speed-speed_difference : max_speed+speed_difference;
       //double right_speed = (direction == fwd) ? max_speed+speed_difference : max_speed-speed_difference;
@@ -1016,8 +661,8 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
       //Brain.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", desiredPoint.x, desiredPoint.y, x, side, theta);
       // Move forward in time
       
-      leftGroup.spin(direction,left_speed,pct);
-      rightGroup.spin(direction,right_speed,pct);
+      Chassis::leftGroup.spin(direction,left_speed,pct);
+      Chassis::rightGroup.spin(direction,right_speed,pct);
       t+=timeStep;
       wait(timeStep, sec);
     }
@@ -1028,420 +673,73 @@ void followBezier(std::vector<Vector2d> points, vex::directionType direction = f
       //Brain.Screen.print("d: %.1f a: %.1f t: %.1f", distance, angle_difference, time_diff);
       Brain.Screen.print("%.1f, %.1f", currentPosition.x, currentPosition.y);
       
-    leftGroup.stop();
-    rightGroup.stop();
+    Chassis::leftGroup.stop();
+    Chassis::rightGroup.stop();
 }
 
-//In case intake requires the robot to rock back and forth to outtake
-int shake() {
-  for(int i=0; i<3; i++) {
-    straight(1,100);
-    straight(-1,100); 
-  }
-  return 1;
-}
-//chaining controller
-namespace MotionController {
-  //moves robot straight for distance in inches
-  std::function<void()> straight(float distance, float speed = 80, float heading = inertialSensor.heading()) {
-    return [=] (){
-      float rotation = distToRot(distance);
-      //leftGroup.spin(distance > 0 ? fwd : reverse, speed, pct);
-      //rightGroup.spin(distance > 0 ? fwd : reverse, speed, pct);
-      float kp = 2;
-      float kd = 0;
-      float ki = 2;
-      float e = 0;
-      float eRec = 0;
-      float d = 0;
-      float i = 0;
-      float dt = 0.025;
-      float currentRotation = inertialSensor.rotation();
-      float wantedMotorPosition = leftGroup.position(deg)+rotation;
-      for(double t=0; t<fabs(distance/20) && signum(distance)*(wantedMotorPosition - leftGroup.position(deg))>0; t+=0.025) {
-        e = -1 * signum(distance) * (inertialSensor.rotation() - currentRotation);
-        i += e*dt;
-        d = (e-eRec)/dt;
-        eRec = e;
-        float speedDiff = kp*e + kd*d + ki*i;
-        float leftVoltage = fmin((speed+speedDiff)/8.3, 12);
-        float rightVoltage = fmin((speed-speedDiff)/8.3,12);
-        leftGroup.spin(distance > 0 ? fwd : reverse, leftVoltage, volt);
-        rightGroup.spin(distance > 0 ? fwd : reverse, rightVoltage, volt);
-        //leftGroup.setVelocity(speed + speedDiff,pct);
-        //rightGroup.setVelocity(speed - speedDiff, pct);
-        wait(0.025,sec);
-      }
-    };
-  }
-  std::function<void()> straight(directionType direction, float time, timeUnits units=msec, float heading = inertialSensor.heading()) {
-    return [=] (){
-      //leftGroup.spin(distance > 0 ? fwd : reverse, speed, pct);
-      //rightGroup.spin(distance > 0 ? fwd : reverse, speed, pct);
-      float kp = 2;
-      float kd = 0;
-      float ki = 2;
-      float e = 0;
-      float eRec = 0;
-      float d = 0;
-      float i = 0;
-      float dt = 0.025;
-      float currentRotation = inertialSensor.rotation();
-      for(double t=0; t<time; t+=0.025) {
-        e = (direction==fwd ? -1 : 1) * (inertialSensor.rotation() - currentRotation);
-        i += e*dt;
-        d = (e-eRec)/dt;
-        eRec = e;
-        float speedDiff = kp*e + kd*d + ki*i;
-        float leftVoltage = fmin(11+(speedDiff)/9, 12);
-        float rightVoltage = fmin(11-(speedDiff)/9,12);
-        leftGroup.spin(direction, leftVoltage, volt);
-        rightGroup.spin(direction, rightVoltage, volt);
-        //leftGroup.setVelocity(speed + speedDiff,pct);
-        //rightGroup.setVelocity(speed - speedDiff, pct);
-        wait(0.025,sec);
-      }
-    };
-  }
-  //goes straight in a direction until it collides with something
-  std::function<void()> slam(directionType direction, float currentRotation = inertialSensor.rotation()) {
-    return [=] (){
-      leftGroup.spin(direction, 11, volt);
-      rightGroup.spin(direction, 11, volt);
-      wait(0.5,sec);
-      float kp = 2;
-      float kd = 0;
-      float ki = 0;
-      float e = 0;
-      float eRec = 0;
-      float d = 0;
-      float i = 0;
-      float dt = 0.025;
-      while (!(fabs(inertialSensor.acceleration(yaxis))>0.5)) {
-        e = (direction==fwd ? -1 : 1) * (inertialSensor.rotation() - currentRotation);
-        i += e*dt;
-        d = (e-eRec)/dt;
-        eRec = e;
-        float speedDiff = kp*e + kd*d + ki*i;
-        float leftVoltage = fmin((80+speedDiff)/9, 11);
-        float rightVoltage = fmin((80-speedDiff)/9,11);
-        leftGroup.spin(direction, leftVoltage, volt);
-        rightGroup.spin(direction, rightVoltage, volt);
-        wait(0.025,sec);
-      }
-    };
-  }
-  //turns clockwise a given amount
-  std::function<void()> turn(float rotation, float timeout = 4, float endError = 2) {
-    return [=] (){
-      float e = 0;
-      float d = 0;
-      float i = 0;
-      float eRec = 0;
-      float dt = 0.02;
-      float kp = 1.5;
-      float kd = 0.11;
-      float ki = 0.20;
-      if(rotation<0) {
-        float kp = 1.5;
-        float kd = 0.11;
-        float ki = 0.20;
-      }
-      float t=0;
-      double currAngle = inertialSensor.rotation(deg);
-      double wantedAngle = currAngle + rotation;
-      e = wantedAngle-inertialSensor.rotation(deg);
-      while (((fabs(e) > endError) || fabs(d) > 20) && t < timeout) {
-        e = wantedAngle-inertialSensor.rotation(deg);
-        d = (e-eRec)/dt;
-        if(e*eRec < 0) i=0;
-        i += e*dt;
-        t+=dt;
-        eRec = e;
-        float speed = kp*e + kd*d + ki*i;
-        float voltage = speed/9;
-        if(voltage>11) {
-          voltage = 11;
-        } else if(voltage<-11) {
-          voltage = -11;
-        } else if(fabs(voltage)<2) {
-          if(voltage<0) voltage = -2;
-          else voltage = 2;
-        }
-        leftGroup.spin(fwd, voltage, volt);
-        rightGroup.spin(reverse, voltage, volt);
-        wait(dt,sec);
-      }
-    };
-  }
-  //turns to a specific heading
-  std::function<void()> turnToHeading(float heading, float timeout = 4, float endError = 2) {
-    return [=]() {
-      float clockwiseRotation = heading-inertialSensor.heading();
-      float closestPath = 0;
-      if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
-        closestPath = clockwiseRotation;
-        if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
-      } else {
-        closestPath = clockwiseRotation+360;
-      }
-      turn(closestPath, timeout, endError)();
-    };
-  }
-  //moves one side of the drivetrain until the robot has turned a specific amount
-  std::function<void()> swing(turnType side, float rotation, float timeout = 4, float endError = 2) {
-    return [=]() {
-      float e = 0;
-      float d = 0;
-      float i = 0;
-      float eRec = 0;
-      float kp = 2.6;
-      float kd = 0.2;
-      float ki = 0.20;
-      float dt = 0.02;
-      float t=0;
-      double currAngle = inertialSensor.rotation(deg);
-      double wantedAngle = currAngle + rotation;
-      e = wantedAngle-inertialSensor.rotation(deg);
-      if(side==left) {
-        leftGroup.stop(brake);
-        while (((fabs(e) > endError) || fabs(d) > 20) && t < timeout) {
-          e = wantedAngle-inertialSensor.rotation(deg);
-          d = (e-eRec)/dt;
-          if(e*eRec < 0) i=0;
-          i += e*dt;
-          t+=dt;
-          eRec = e;
-          float speed = kp*e + kd*d + ki*i;
-          float voltage = speed/9;
-          if(voltage>11) {
-            voltage = 11;
-          } else if(voltage<-11) {
-            voltage = -11;
-          } else if(fabs(voltage)<2) {
-            if(voltage<0) voltage = -2;
-            else voltage = 2;
-          }
-          rightGroup.spin(fwd,-voltage,volt);
-          vex::wait(dt,sec);
-        }
-      } else {
-      rightGroup.stop(brake);
-      while (((fabs(e) > endError) || fabs(d) > 20) && t < timeout) {
-        e = wantedAngle-inertialSensor.rotation(deg);
-        d = (e-eRec)/dt;
-        if(e*eRec < 0) i=0;
-        i += e*dt;
-        t+=dt;
-        eRec = e;
-        float speed = kp*e + kd*d + ki*i;
-        float voltage = speed/9;
-        if(voltage>11) {
-          voltage = 11;
-        } else if(voltage<-11) {
-          voltage = -11;
-        } else if(fabs(voltage)<2) {
-          if(voltage<0) voltage = -2;
-          else voltage = 2;
-        }
-        leftGroup.spin(fwd,voltage,volt);
-        wait(dt,sec);
-      }
-    }
-    };
-  }
-  //swings to a heading
-  std::function<void()> swingToHeading(turnType side, float heading, directionType direction = fwd, float timeout = 4, float endError = 2) {
-    return [=]() {
-      float clockwiseRotation = heading-inertialSensor.heading();
-      float closestPath = clockwiseRotation;
-      if(fabs(clockwiseRotation) < fabs(clockwiseRotation+360)) {
-        if(fabs(clockwiseRotation-360) < fabs(closestPath)) closestPath-=360;
-      } else {
-        closestPath = clockwiseRotation+360;
-      }
-      swing(side, closestPath, timeout, endError)();
-    };
-  }
-  //performs an arc of size specified in degrees around a point of a given side of robot
-  std::function<void()> arc(float radius, float rotation, turnType side) {
-    return[=]() {
-      float radAngle = rotation/180*M_PI;
-      float leftArc;
-      float rightArc;
-      float leftspeed;
-      float rightspeed;
-      float maxSpeed = fmin(50+radius,100);
-      if(side==right) {
-        leftArc = (radius+drivetrainWidth/2)*radAngle;
-        rightArc = (radius-drivetrainWidth/2)*radAngle;
-      } else {
-        leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
-        rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
-      }
-      leftspeed = sqrtf(fabs(leftArc/rightArc));
-      rightspeed = sqrtf(fabs(rightArc/leftArc));
-      if(leftspeed >rightspeed)
-        {
-          rightspeed = rightspeed/leftspeed;
-          leftspeed=1;
-      }else{
-        leftspeed = leftspeed/rightspeed;
-        rightspeed=1;
-      }
-      
-      float wantedLeftPosition = leftGroup.position(deg) + distToRot(leftArc);
-      float wantedRightPosition = rightGroup.position(deg) + distToRot(rightArc);
-      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * maxSpeed, pct);
-      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
-      wait(0.5,sec);
-      for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
-        if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
-        wait(0.025,sec);
-      }
-    };
-  }
-  std::function<void()> arc(float radius, float rotation, turnType side, float timeout) {
-    return[=]() {
-      float radAngle = rotation/180*M_PI;
-      float leftArc;
-      float rightArc;
-      float leftspeed;
-      float rightspeed;
-      float maxSpeed = fmin(50+radius,100);
-      if(side==right) {
-        leftArc = (radius+drivetrainWidth/2)*radAngle;
-        rightArc = (radius-drivetrainWidth/2)*radAngle;
-      } else {
-        leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
-        rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
-      }
-      leftspeed = sqrtf(fabs(leftArc/rightArc));
-      rightspeed = sqrtf(fabs(rightArc/leftArc));
-      if(leftspeed >rightspeed)
-        {
-          rightspeed = rightspeed/leftspeed;
-          leftspeed=1;
-      }else{
-        leftspeed = leftspeed/rightspeed;
-        rightspeed=1;
-      }
-      
-      float wantedLeftPosition = leftGroup.position(deg) + distToRot(leftArc);
-      float wantedRightPosition = rightGroup.position(deg) + distToRot(rightArc);
-      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * maxSpeed, pct);
-      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
-      wait(0.5,sec);
-      for(double t=0; t<timeout; t+=0.025) {
-        if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
-        wait(0.025,sec);
-      }
-    };
-  }
- 
-  void run(std::function<void()> func) {
-    func();
-    leftGroup.stop();
-    rightGroup.stop();
-  }
-  void chain(const std::vector<std::function<void()>> funcs) {
-    for(auto func : funcs) {
-      func();
-    }
-    leftGroup.stop();
-    rightGroup.stop();
-  }
-}
 void pre_auton(void) {
+  Chassis::init(vex::motor_group(FrontLeft,MidLeft,BackLeft),vex::motor_group(FrontRight,MidRight,BackRight),PORT20,3.25,36/48,11.5);
   sylib::initialize();
-  inertialSensor.calibrate();
-  while (inertialSensor.isCalibrating()) {
-    wait(100, msec);
-  } 
-  inertialSensor.resetHeading();
   Catapult.setStopping(brakeType::brake);
-  Catapult.setVelocity(100,pct);
+  Catapult.setVelocity(100,pct); 
   Intake.setVelocity(100,pct);
-  leftGroup.setVelocity(50, percent);
-  leftGroup.setStopping(coast);
-  rightGroup.setStopping(coast);
-  rightGroup.setVelocity(50, percent);
+  Chassis::leftGroup.setVelocity(50, percent);
+  Chassis::leftGroup.setStopping(coast);
+  Chassis::rightGroup.setStopping(coast);
+  Chassis::rightGroup.setVelocity(50, percent);
   sideTracking.resetPosition();
   forwardTracking.resetPosition();
   //hangSensor.setPosition(hangSensor.angle(),deg);
 }
-void brakeAll() {
-  leftGroup.setStopping(brakeType::brake);
-  rightGroup.setStopping(brakeType::brake);
-}
-/*
-vex::task LED;
-int LEDRainbow() {
-    std::uint32_t clock = sylib::millis();
-    DescoreLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    DescoreLEDS -> cycle(Under3 -> buffer, 10);
 
-    Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under3 -> cycle(Under3 -> buffer, 10);
-
-    Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under1 -> cycle(Under1 -> buffer, 10);
-
-    Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Under2 -> cycle(Under2 -> buffer, 10);
-  while (true) {
-    sylib::delay_until(&clock, 10);
-  }
-  return 1;
-}*/
 void oppositeSide(void) {
-//odom = vex::task(runOdom);
+  //odom = vex::task(runOdom);
   //orientation = -90;
   setInertial(90);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
-  vex::task run(releaseIntake);
+  vex::task intake(releaseIntake);
   //straight(-5);
   wait(0.5, sec);
   Intake.spin(fwd);  
-  straight(3, 35);
+  run(straight(3, 35));
   //pp stuff
   wait(0.25,sec);
-  turnToHeading(88.5);
+  run(turnToHeading(88.5));
   wait(0.5,sec);
-  straight(-29, 60);
+  run(straight(-29, 60));
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
-  arc(13,-90,right);
+  run(arc(13,-90,right));
   toggleDescore();
   //straight(-22);
-  turnToHeading(30);
-  MotionController::chain({
-    MotionController::arc(24,-30,right),
-    MotionController::straight(reverse,0.5)
+  run(turnToHeading(30));
+  chain({
+    arc(24,-30,right),
+    straight(reverse,0.5)
   });
   straight(12);
   //smartTurn(-25);
   //turnToHeading(0);
-  smartTurn(180);
+  run(turn(180));
   Intake.spin(reverse);
   wait(0.5,sec);
   straight(17);
   straight(-14);
   Intake.spin(fwd);
-  MotionController::chain({
-    MotionController::turnToHeading(113),
-    MotionController::straight(38),
-    MotionController::swingToHeading(right,270,fwd,1.5)
+  chain({
+    turnToHeading(113),
+    straight(38),
+    swingToHeading(right,270,fwd,1.5)
   });
   Intake.spin(reverse);
-  MotionController::chain({
-    MotionController::straight(fwd,1),
-    MotionController::straight(-10),
-    MotionController::turnToHeading(31),
-    MotionController::straight(38)
+  chain({
+    straight(fwd,1),
+    straight(-10),
+    turnToHeading(31),
+    straight(38)
   });
   //turnToHeading(110);
   //Intake.spin(fwd);
@@ -1475,94 +773,46 @@ void oppositeSideUnsafe(void) {
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
-  vex::task run(releaseIntake);
+  vex::task intake(releaseIntake);
   //straight(-5);
   wait(0.5, sec);
   Intake.spin(fwd);  
-  straight(3, 35);
+  run(straight(3, 35));
   //pp stuff
   wait(0.25,sec);
-  turnToHeading(88.5);
+  run(turnToHeading(88.5));
   wait(0.5,sec);
-  straight(-29, 60);
+  run(straight(-29, 60));
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
-  arc(13,-90,right);
+  run(arc(13,-90,right));
   toggleDescore();
   //straight(-22);
-  turnToHeading(30);
-  MotionController::chain({
-    MotionController::arc(24,-30,right),
-    MotionController::straight(reverse,0.5)
+  run(turnToHeading(30));
+  chain({
+    arc(24,-30,right),
+    straight(reverse,0.5)
   });
-  straight(12);
+  run(straight(12));
   //smartTurn(-25);
   //turnToHeading(0);
-  smartTurn(180);
+  run(turn(180));
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(17);
-  straight(-14);
+  run(straight(17));
+  run(straight(-14));
   Intake.spin(fwd);
-  MotionController::chain({
-    MotionController::turnToHeading(113),
-    MotionController::straight(38),
-    MotionController::swingToHeading(right,270,fwd,1.5)
+  chain({
+    turnToHeading(113),
+    straight(38),
+    swingToHeading(right,270,fwd,1.5)
   });
   Intake.spin(reverse);
-  MotionController::chain({
-    MotionController::straight(fwd,1.25),
-    MotionController::straight(6)
+  chain({
+    straight(fwd,1.25),
+    straight(6)
   });
-}
-void oppositeSideElim(void) {
-  //start close to left of tile touching wall
-  // vex::task run(bringCataDown);
-  Intake.setVelocity(100,pct);
-  // score alliance triball to near net    
-  setInertial(270);
-  Intake.spin(fwd);   
-  straight(3, 35);
-  wait(0.5,sec);
-  straight(-26,75);
-  toggleWings();
-  arc(17.25,-85,right);
-  toggleWings();
-  straight(-10);
-  turnToHeading(180);
-  wait(0.3,sec);
-  straight(-10);
-  // slam(reverse);
-  straight(1.5);
-  arc(6,180,right);
-  straight(30);
-  turnToHeading(80);
-  Intake.stop();
-  Intake.spin(reverse);
-  straight(-2.5);
-  straight(16.5);
-  straight(-17);
-  simpleTurn(170);
-  Intake.stop();
-  Intake.spin(fwd);
-  straight(18);
-  turnToHeading(60);
-  straight(10);
-  Intake.stop();
-  Intake.spin(reverse);
-  straight(-2);
-  slam(fwd);
-  straight(-10);
-
-  /*5th ball
-  turnToHeading(285);
-  Intake.spin(fwd);
-  straight(30.75);
-  toggleWings();
-  turnToHeading(270);
-  slam(reverse);
-  */
 }
 void sameSide(void) {
  //odom = vex::task(runOdom);
@@ -1571,29 +821,29 @@ void sameSide(void) {
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
-  vex::task run(releaseIntake);
+  vex::task intake(releaseIntake);
   Intake.spin(fwd);
-  MotionController::chain({
-    MotionController::straight(42,100),
-    MotionController::arc(12,20,right),
-    MotionController::straight(-38),
-    MotionController::turnToHeading(295)
+  chain({
+    straight(42,100),
+    arc(12,20,right),
+    straight(-38),
+    turnToHeading(295)
   });
   Intake.spin(reverse);
   wait(1,sec);
   Intake.stop();
-  MotionController::chain({
-    MotionController::turnToHeading(115),
-    MotionController::straight(18.5),
-    MotionController::swingToHeading(right,135),
+  chain({
+    turnToHeading(115),
+    straight(18.5),
+    swingToHeading(right,135),
     toggleDescore,
-    MotionController::straight(-15),
-    MotionController::turnToHeading(90,1),
+    straight(-15),
+    turnToHeading(90,1),
     toggleDescore,
-    MotionController::swingToHeading(left,120,fwd,1),
-    MotionController::straight(-16),
-    MotionController::turnToHeading(90,1),
-    MotionController::straight(-8)
+    swingToHeading(left,120,fwd,1),
+    straight(-16),
+    turnToHeading(90,1),
+    straight(-8)
   });
   brakeAll();
 
@@ -1604,78 +854,21 @@ void AWPSameSide(void) {
   setInertial(135);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
-  straight(13);
+  run(straight(13));
   toggleDescore();
-  MotionController::run(MotionController::swingToHeading(right,90));
+  run(swingToHeading(right,90));
   toggleDescore();
-  turnToHeading(120);
+  run(turnToHeading(120));
   Catapult.spinFor(1700,deg,false);
-  straight(-18);
-  turnToHeading(90);
-  straight(-28);
-  straight(-6,20);
+  run(straight(-18));
+  run(turnToHeading(90));
+  run(straight(-28));
+  run(straight(-6,20));
 }
-void oldProg(void) {
-   inertialSensor.setHeading(90,deg);
-  
-  arc(18,90,left);
-  slam(reverse);
-  straight(10.5);
-  turnToHeading(73.5);
-  straight(-3);
-  turnToHeading(69);
-  toggleDescore();
-  toggleCata();
-  float realOrientation = inertialSensor.heading(deg);
-  wait(5,sec);
-  toggleCata();
-  toggleDescore();
-  //bringCataDown(250);
-  //go to other side
-  inertialSensor.setHeading(realOrientation,deg);
-  straight(4);
-  turnToHeading(315);
-  arc(120,-17,right);
-  turnToHeading(270);
-  
-  straight(-54);
-  //go to other side
-  //toggleWings();
-  arc(22.5,-90,right);
-  turnToHeading(180);
-  slam(reverse);
-  straight(4);
-  slam(reverse);
-  //push side triballs in
-  // arc(21,-90,right);
-  // turnToHeading(180);
-  // slam(reverse);
-  //toggleWings();
-  //backup
-  arc(11.5,160,right);
-  turnToHeading(160);
-  //backup
-  straight(-22);
-  toggleDescore();
-  arc(15,102.5,left);
-  slam(reverse);
-  straight(6);
-  slam(reverse);
-  straight(8);
-  toggleDescore();
-  arc(50,40,right);
-  turnToHeading(0);
-  straight(40);
-  turnToHeading(315);
-  toggleDescore();
-  arc(70,-45,right);
-  straight(10);
-  toggleDescore();
-  straight(50);
-}
+
 void odomSkills(void) {
-  inertialSensor.setHeading(90,deg);
-  inertialSensor.setRotation(90,deg);
+  Chassis::inertialSensor.setHeading(90,deg);
+  Chassis::inertialSensor.setRotation(90,deg);
   orientation = -90;
   odom = task(runOdom);
   currentPosition = {36,12};
@@ -1683,8 +876,8 @@ void odomSkills(void) {
   followApproxBezier({{18,18}, {12, 38}}, 180, reverse,18);
   slam(reverse);
   followApproxBezier({{24,24}},fwd,8);
-  leftGroup.stop();
-  rightGroup.stop();
+  Chassis::leftGroup.stop();
+  Chassis::rightGroup.stop();
   //togglePTO();
   
   //arc(30,-20,left);
@@ -1723,277 +916,102 @@ void odomSkills(void) {
   straight(34);
   Controller1.Screen.print("hanging");*/
 }
-void roomba(void) {
-    /*MotionController::chain({
-    MotionController::straight(-2),
-    MotionController::swingToHeading(right,295),
-    MotionController::straight(52),
-    MotionController::turnToHeading(260)
-  });*/
-  
-  MotionController::chain({
-    MotionController::swingToHeading(left,115),
-    MotionController::straight(-30),
-    MotionController::swingToHeading(left,270),
-    toggleDescore,
-    MotionController::straight(-28)
-  });
-  MotionController::chain({
-    MotionController::straight(16),
-    toggleDescore,
-    MotionController::swing(right,180),
-    MotionController::straight(28)
-  });
-  MotionController::chain({
-    MotionController::straight(-16),
-    MotionController::swing(left,180),
-    toggleDescore,
-    MotionController::straight(-28)
-  });
-  MotionController::chain({
-    MotionController::straight(16),
-    toggleDescore,
-    MotionController::swingToHeading(right,0),
-    MotionController::straight(18),
-    MotionController::swingToHeading(right,90),
-    MotionController::straight(40),
-    MotionController::swingToHeading(left,180),
-    MotionController::slam(fwd),
-    MotionController::arc(30,20,left),
-    MotionController::swingToHeading(right,150),
-    MotionController::arc(30,30,right),
-    MotionController::slam(fwd)
-  });
-}
-void progBeginning() {
-    hang = false;
-  //vex::task intake(releaseIntake);
-  inertialSensor.setHeading(90,deg);
-  inertialSensor.setRotation(90,deg);
-  orientation = -90;
-  //odom = task(runOdom);
-  currentPosition = {36,12};
-  MotionController::chain({
-    MotionController::arc(18,90,left),
-    MotionController::straight(reverse,0.5)
-  });
-  MotionController::chain({
-    MotionController::turnToHeading(180,0.25),
-    MotionController::straight(10.5,80,180),
-    MotionController::turnToHeading(71)
-  });
-  MotionController::run(MotionController::straight(-2));
-  MotionController::run(MotionController::turnToHeading(71));
-  toggleDescore();
-  toggleCata();
-    float currentRotation = inertialSensor.rotation(deg);
-  float currentHeading = inertialSensor.heading(deg);
-  vex::wait(26,sec);
-  toggleCata();
-  toggleDescore();
-  togglePTO();
-  setInertial(currentHeading);
-  MotionController::chain({
-    MotionController::turnToHeading(305),
-    MotionController::straight(-25),
-    MotionController::swingToHeading(right,270),
-    MotionController::straight(-62),
-    /*
-    MotionController::swingToHeading(right,225,fwd,0.75),
-    MotionController::straight(-16),
-    MotionController::swingToHeading(right,180,fwd,0.75),
-    MotionController::straight(reverse,0.5),
-    MotionController::straight(6,80,180),
-    MotionController::turnToHeading(180,0.5),
-    MotionController::straight(reverse,0.75,msec,180),
-    MotionController::straight(14)
-    */
-  });
-}
+
 void programmingSkills(void) {
   hang = false;
   Catapult.setStopping(coast);
-  //vex::task intake(releaseIntake);
-  inertialSensor.setHeading(90,deg);
-  inertialSensor.setRotation(90,deg);
-  orientation = -90;
-  //odom = task(runOdom);
-  currentPosition = {36,12};
-  MotionController::chain({
-    MotionController::arc(13,90,left),
-    MotionController::straight(reverse,0.5)
-  });
-  MotionController::chain({
-    MotionController::turnToHeading(180,0.25),
-    MotionController::straight(10.5,80,180),
-    MotionController::turnToHeading(69)
-  });
-  MotionController::run(MotionController::straight(-3));
-  MotionController::run(MotionController::turnToHeading(69,0.5,0.5));
-  toggleDescore();
-  toggleCata();
-  float currentRotation = inertialSensor.rotation(deg);
-  float currentHeading = inertialSensor.heading(deg);
-  vex::wait(24.5,sec);
-  //waitUntil(Controller1.ButtonA.pressing());
-  toggleCata();
-  toggleDescore();
-  //togglePTO();
-  setInertial(currentHeading);
-  MotionController::chain({
-    MotionController::straight(2),
-    MotionController::turnToHeading(310),
-    MotionController::straight(-23.5),
-    MotionController::swingToHeading(right,270),
-    MotionController::straight(-60),
-    MotionController::arc(18,-90,right),
-    MotionController::straight(reverse,1),
-    MotionController::straight(12),
-    MotionController::straight(reverse,1),
-    MotionController::straight(12),
-    MotionController::straight(reverse,1),
-    // MotionController::swingToHeading(right,225,fwd,0.75),
-    // MotionController::straight(-16),
-    // MotionController::swingToHeading(right,180,fwd,0.3),
-    // MotionController::straight(reverse,0.5),
-    // MotionController::straight(8,80,180),
-    // MotionController::straight(reverse,1),
-    MotionController::straight(14)
-  });
-  MotionController::chain({ 
-    MotionController::swingToHeading(right,105,fwd,1),
-    MotionController::straight(-24),
-    MotionController::swingToHeading(left,265,fwd,1),
-    toggleDescore,
-    MotionController::straight(reverse,1),
-    MotionController::straight(14),
-    MotionController::straight(reverse,1)
-  });
-  /*
-  MotionController::chain({
-    MotionController::straight(4),
-    toggleDescore,
-    MotionController::turnToHeading(90),
-    MotionController::straight(-8),
-    MotionController::swing(left,60),
-    MotionController::straight(-5),
-    MotionController::swing(left,120),
-    toggleDescore,
-    MotionController::straight(reverse,2)
-  });
-  */
- MotionController::chain({
-    MotionController::straight(4),
-    toggleDescore,
-    MotionController::turnToHeading(90),
-    MotionController::straight(-3),
-    MotionController::swing(left,180,0.5),
-    MotionController::swingToHeading(left,270,fwd,1),
-    toggleDescore,
-    MotionController::straight(reverse,1),
-    MotionController::straight(12),
-    MotionController::straight(reverse,1)
-  });
-  
-  //vex::task hang(hangSetup);
-  /*MotionController::chain({
-    MotionController::arc(35,45,right),
-    toggleDescore,  
-    MotionController::swingToHeading(right,75),
-    MotionController::straight(38),
-    MotionController::swingToHeading(right,180),
-    MotionController::straight(-4),
-    MotionController::straight(fwd,1)
-  });*/
-  MotionController::chain({
-    MotionController::straight(2),
-    toggleDescore,
-    MotionController::turnToHeading(7),
-    MotionController::straight(38),
-    MotionController::turnToHeading(90),
-    MotionController::arc(16,90,right),
-    MotionController::straight(fwd,1),
-    MotionController::straight(-8),
-    MotionController::straight(fwd,1),
-    MotionController::straight(-8),
-    MotionController::turnToHeading(0),
-    MotionController::straight(reverse,1)
-  });
-
-  // MotionController::chain({
-  //   MotionController::swingToHeading(right,120),
-  //   MotionController::straight(-40),
-  //   MotionController::swingToHeading(left,90),
-  //   MotionController::straight(24),
-  //   MotionController::swingToHeading(right,135),
-  //   MotionController::straight(24),
-  //   MotionController::swingToHeading(right,180,fwd,0.3),
-  //   MotionController::straight(fwd,1)
-  // });
-  /*if(hangSensor.position(deg)>400) {
-    MotionController::chain({
-      MotionController::straight(-4),
-      MotionController::turnToHeading(315),
-      MotionController::straight(24),
-      MotionController::swingToHeading(left,270),
-      MotionController::straight(40)
-    });
-    vex::task gaming(sideHang);
-  } else {*/
-    MotionController::chain({
-      MotionController::straight(4),
-      MotionController::swingToHeading(right,75),
-      MotionController::straight(-40),
-      MotionController::swing(right,-165),
-      toggleDescore,
-      MotionController::straight(reverse,1),
-      MotionController::straight(6),
-      toggleDescore
-    });
-  //}
-  
-}
-void testing(void) {
-  odom = vex::task(runOdom);
-  orientation = -90;
   setInertial(90);
-  currentPosition = {12,36};
-  
-  // followPath({
-  //   {48,70},
-  //   {36,104},
-  //   {40,130},
-  //   {108,130}
-  // });
-
-    // Move the robot along a Bezier spline to the target position
-    followBezier({ {23, -2}, { 121, 8 }, {144,34}});
-    //controller.moveRobot({{ 36, 12 }});
-    wait(1, sec);
-    //left 0, right 10 for 1 second = 21 degrees
-  // leftGroup.spin(fwd);
-  // rightGroup.spin(fwd);
-  // leftGroup.setVelocity(90, pct);
-  // rightGroup.setVelocity(100, pct);
-  // wait(1, sec);
-  // leftGroup.stop();
-  // rightGroup.stop();
+  orientation = -90;
+  currentPosition = {36,12};
+  chain({
+    arc(13,90,left),
+    straight(reverse,0.5)
+  });
+  chain({
+    turnToHeading(180,0.25),
+    straight(10.5,80,180),
+    turnToHeading(69)
+  });
+  run(straight(-3));
+  run(turnToHeading(69,0.5,0.5));
+  toggleDescore();
+  toggleCata();
+  float currentRotation = Chassis::inertialSensor.rotation(deg);
+  float currentHeading = Chassis::inertialSensor.heading(deg);
+  vex::wait(24.5,sec);
+  toggleCata();
+  toggleDescore();
+  setInertial(currentHeading);
+  chain({
+    straight(2),
+    turnToHeading(310),
+    straight(-23.5),
+    swingToHeading(right,270),
+    straight(-60),
+    arc(18,-90,right),
+    straight(reverse,1),
+    straight(12),
+    straight(reverse,1),
+    straight(12),
+    straight(reverse,1),
+    straight(14)
+  });
+  chain({ 
+    swingToHeading(right,105,fwd,1),
+    straight(-24),
+    swingToHeading(left,265,fwd,1),
+    toggleDescore,
+    straight(reverse,1),
+    straight(14),
+    straight(reverse,1)
+  });
+ chain({
+    straight(4),
+    toggleDescore,
+    turnToHeading(90),
+    straight(-3),
+    swing(left,180,0.5),
+    swingToHeading(left,270,fwd,1),
+    toggleDescore,
+    straight(reverse,1),
+    straight(12),
+    straight(reverse,1)
+  });
+  chain({
+    straight(2),
+    toggleDescore,
+    turnToHeading(7),
+    straight(38),
+    turnToHeading(90),
+    arc(16,90,right),
+    straight(fwd,1),
+    straight(-8),
+    straight(fwd,1),
+    straight(-8),
+    turnToHeading(0),
+    straight(reverse,1)
+  });
+  chain({
+    straight(4),
+    swingToHeading(right,75),
+    straight(-40),
+    swing(right,-165),
+    toggleDescore,
+    straight(reverse,1),
+    straight(6),
+    toggleDescore
+  });
 
 }
+
 void testPID(void) {
   for(int i=6; i>0; i--) {
     for(int j=0; j<i; j++) {
-      MotionController::run(MotionController::swing(right,-360/i));
+      run(swing(right,-360/i));
       //straight(12);
     }
   }
   //straight(70);
-}
-void testHang(void) {
-  releaseIntake();
-  //hangSetup();
-  straight(24);
-  Catapult.spinFor(reverse, 1500, deg);
 }
 void usercontrol(void) {
   hang = true;
@@ -2075,9 +1093,9 @@ void usercontrol(void) {
     // Set the speed of the left motors. If the value is less than the deadband,
     // set it to zero.
     if (fabs(leftMotorSpeed) < deadband) {
-      leftGroup.setVelocity(0, percent);
+      Chassis::leftGroup.setVelocity(0, percent);
     } else {
-      leftGroup.setVelocity(leftMotorSpeed, percent);
+      Chassis::leftGroup.setVelocity(leftMotorSpeed, percent);
     }
 
     // Drivetrain inversion
@@ -2113,13 +1131,13 @@ void usercontrol(void) {
     // Set the speed of the right motors. If the value is less than the deadband,
     // set it to zero   .
     if (fabs(rightMotorSpeed) < deadband) {
-      rightGroup.setVelocity(0, percent);
+      Chassis::rightGroup.setVelocity(0, percent);
     } else {
-      rightGroup.setVelocity(rightMotorSpeed, percent);
+      Chassis::rightGroup.setVelocity(rightMotorSpeed, percent);
     }
     // Spin all drivetrain motors in the forward direction.
-    leftGroup.spin(forward);
-    rightGroup.spin(forward);
+    Chassis::leftGroup.spin(forward);
+    Chassis::rightGroup.spin(forward);
     //Controller1.Screen.setCursor(0,0);
     //Controller1.Screen.clearLine();
     //Controller1.Screen.print("%.1f, %.1f, %.1f, %.1f, %.1f", currentPosition.x, currentPosition.y, -inertialSensor.rotation(), forwardTracking.position(deg), sideTracking.position(deg));
@@ -2129,22 +1147,21 @@ void usercontrol(void) {
 void driverSkills(void) {
   hang = false;
   //vex::task intake(releaseIntake);
-  inertialSensor.setHeading(90,deg);
-  inertialSensor.setRotation(90,deg);
+  setInertial(90);
   orientation = -90;
   //odom = task(runOdom);
   currentPosition = {36,12};
-  MotionController::chain({
-    MotionController::arc(13.5,90,left),
-    MotionController::straight(reverse,0.5)
+  chain({
+    arc(13.5,90,left),
+    straight(reverse,0.5)
   });
-  MotionController::chain({
-    MotionController::turnToHeading(180,0.25),
-    MotionController::straight(10.5,80,180),
-    MotionController::turnToHeading(67)
+  chain({
+    turnToHeading(180,0.25),
+    straight(10.5,80,180),
+    turnToHeading(67)
   });
-  MotionController::run(MotionController::straight(-2));
-  MotionController::run(MotionController::turnToHeading(67));
+  run(straight(-2));
+  run(turnToHeading(67));
   toggleDescore();
   toggleCata();
   usercontrol();
@@ -2153,9 +1170,10 @@ void driverSkills(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+  using namespace vex;
   typedef void (*callback)();
-  callback progs[6] = {oppositeSide, oppositeSideElim, AWPSameSide, sameSide, programmingSkills, testing};
-  std::string progNames[6] = {"Safe Opposite", "Cool Opposite", "Safe Same", "Cool Same", "Skills", "test"};
+  callback progs[6] = {oppositeSide, oppositeSideUnsafe, AWPSameSide, sameSide, programmingSkills};
+  std::string progNames[6] = {"Safe Opposite", "Cool Opposite", "Safe Same", "Cool Same", "Skills"};
   //Brain.Screen.render(true,false); //set VSync (vertical sync) on, automatic refresh to off
   // Run the pre-autonomous function.
   pre_auton();
