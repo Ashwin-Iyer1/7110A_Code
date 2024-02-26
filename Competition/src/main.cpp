@@ -1766,7 +1766,7 @@ void roomba(void) {
   });
 }
 void progBeginning() {
-  hang = false;
+    hang = false;
   //vex::task intake(releaseIntake);
   inertialSensor.setHeading(90,deg);
   inertialSensor.setRotation(90,deg);
@@ -1786,7 +1786,7 @@ void progBeginning() {
   MotionController::run(MotionController::turnToHeading(71));
   toggleDescore();
   toggleCata();
-  float currentRotation = inertialSensor.rotation(deg);
+    float currentRotation = inertialSensor.rotation(deg);
   float currentHeading = inertialSensor.heading(deg);
   vex::wait(26,sec);
   toggleCata();
