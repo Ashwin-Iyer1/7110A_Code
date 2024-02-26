@@ -38,15 +38,15 @@ motor      MidLeft =              motor(PORT2, ratio6_1, true);
 motor      BackLeft =             motor(PORT7, ratio6_1, true);
 motor      FrontRight =           motor(PORT4, ratio6_1, false);
 motor      MidRight =             motor(PORT5, ratio6_1, false);
-motor      BackRight =            motor(PORT6, ratio6_1, false);
+motor      BackRight =            motor(PORT17, ratio6_1, false);
 motor      Catapult1 =            motor(PORT10, ratio18_1, true);
 motor      Catapult2 =            motor(PORT9, ratio18_1, false);
 motor      Intake =               motor(PORT8, ratio18_1, true);
 
 inertial   inertialSensor =    inertial(PORT20);
-rotation   sideTracking =      rotation(PORT17);
-rotation   forwardTracking =   rotation(PORT19);
-rotation   hangSensor =        rotation(PORT14);
+rotation   sideTracking =      rotation(PORT19);
+rotation   forwardTracking =   rotation(PORT6);
+//rotation   hangSensor =        rotation(PORT14);
 
 pneumatics pto =             pneumatics(Brain.ThreeWirePort.A);
 pneumatics Descore =         pneumatics(Brain.ThreeWirePort.B);
@@ -59,6 +59,8 @@ motor_group Catapult =   motor_group(Catapult1, Catapult2);
 sylib::Addrled* DescoreLEDS;
 sylib::Addrled* Under1;
 sylib::Addrled* Under2;
+sylib::Addrled* Under3;
+sylib::Addrled* Under4;
 sylib::Addrled* Top;
 
 float gearRatio = 36.0/48.0;
@@ -151,7 +153,7 @@ void toggleCata(int cataSpeed) {
   }
 }
 void toggleCata() {
-  toggleCata(55);
+  toggleCata(60);
 }
 
 void toggleWings() {
@@ -161,90 +163,115 @@ void toggleWings() {
 void toggleDescore() {
   Descore.set(!Descore.value());
 }
-int movePTOGear() {
-  if(!hang) {
-    waitUntil(hangSensor.velocity(dps)<0);
-  } else {
-    waitUntil(hangSensor.velocity(dps)>0);
-  }
-  Catapult.stop();
-  return 1;
-}
+// int movePTOGear() {
+//   if(!hang) {
+//     waitUntil(hangSensor.velocity(dps)<0);
+//   } else {
+//     waitUntil(hangSensor.velocity(dps)>0);
+//   }
+//   Catapult.stop();
+//   return 1;
+// }
 void togglePTO() {
   pto.set(!pto.value());
   if(!hang) {
-    Catapult.spin(fwd);
+    //Catapult.spin(fwd);
   }
   hang = !hang;
-  task move(movePTOGear);
+  if(hang) {
+    Catapult.setStopping(brake);
+  } else {
+    Catapult.setStopping(coast);
+  }
+  //task move(movePTOGear);
 }
 
 int releaseIntake() {
   //Intake.spinFor(-1,rev,false);
   Catapult.spinFor(fwd, 300, deg);
-  Catapult.spinFor(reverse, 500, deg);
+  Catapult.spinFor(reverse, 650, deg);
   return 1;
 }
 
-int hangSetup() {
-  Catapult.spin(fwd,100,pct);
-  waitUntil(hangSensor.position(deg)>786);
-  Catapult.stop();
-  return 1;
-}
-int sideHang() {
-  Catapult.spin(reverse,100,pct);
-  waitUntil(hangSensor.position(deg)<210);
-  Catapult.stop();
-  return 1;
-}
-
+// int hangSetup() {
+//   Catapult.spin(fwd,100,pct);
+//   waitUntil(hangSensor.position(deg)>786);
+//   Catapult.stop();
+//   return 1;
+// }
+// int sideHang() {
+//   Catapult.spin(reverse,100,pct);
+//   waitUntil(hangSensor.position(deg)<210);
+//   Catapult.stop();
+//   return 1;
+// }
+/*
 int handleLEDs() {
-  bool prevDescore = Descore.value();
-  bool idle = false;
-  while(true) {
-    if(Descore.value() && !prevDescore) {
-        DescoreLEDS->set_all(0x000000);
-        DescoreLEDS -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
-        DescoreLEDS -> cycle(**DescoreLEDS, 25);
-        Top->set_all(0x000000);
-        Top -> gradient(0x000000, 0xFF0000, 8, 0, false, false);
-        Top -> cycle(**DescoreLEDS, 25);
-        Under1->set_all(0xFF0000);
-        Under2->set_all(0xFF0000);
-        idle = false;
-    } else if(catatoggle){
-      /*
-      int cataprogress = (int)rotationSensor.position(deg)*2.5;
-      DescoreLEDS->set_all(cataprogress*65793);
-      Top->set_all(cataprogress*65793);
-      Under1->set_all(cataprogress*65793);
-      Under2->set_all(cataprogress*65793);
-      */
-      idle = false;
-    } else if(!idle && !Descore.value()){
-      DescoreLEDS->set_all(0x000000);
-      Top->set_all(0x000000);
-      Under1->set_all(0x000000);
-      Under2->set_all(0x000000);
-      DescoreLEDS -> gradient(0x600000, 0x600002, 0, 0, false, true);
-      DescoreLEDS -> cycle(**DescoreLEDS, 10);
-
       Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Top -> cycle(**Top, 10);
-
       Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Under1 -> cycle(**Under1, 10);
-
       Under2 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
       Under2 -> cycle(**Under2, 10);
-      idle = true;
-    }
-    prevDescore = Descore.value();
+      Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      Under3 -> cycle(**Under3, 10);
+      Under4 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      Under4 -> cycle(**Under4, 10);
+  while(false) {
+      //DescoreLEDS->set_all(0x000000);
+      // Under3->set_all(0xFF00FF);
+      // Under1->set_all(0xFF00FF);
+      // Under2->set_all(0xFF00FF);
+      // Under4->set_all(0xFF00FF);
+      // DescoreLEDS -> gradient(0x600000, 0x600002, 0, 0, false, true);
+      // DescoreLEDS -> cycle(**DescoreLEDS, 10);
+
+      // Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+      // Under3 -> cycle(**Under3, 10);
+      
     wait(50,msec);
   }
+  return 1;
+}*/
+int endgameLEDHandler() {
+  Top->gradient(0xFF0000,0x0000FF);
+  Under1->gradient(0xFF0000,0x0000FF);
+  Under2->gradient(0xFF0000,0x0000FF);
+  Under3->gradient(0xFF0000,0x0000FF);
+  Under4->gradient(0xFF0000,0x0000FF);
+  Top->cycle(**Top,10);
+  Under1->cycle(**Under1,10);
+  Under2->cycle(**Under2,10);
+  Under3->cycle(**Under3,10);
+  Under4->cycle(**Under4,10);
+  //waitUntil(hangSensor.position(deg)>650);
+  /*Top->set_all(0xFF00FF);
+  Under1->set_all(0xFF00FF);
+  Under2->set_all(0xFF00FF);
+  Under3->set_all(0xFF00FF);
+  Under4->set_all(0xFF00FF);*/
+  //waitUntil(hangSensor.position(deg)<300);
+  /*Top->set_all(0x00FF00);
+  Under1->set_all(0x00FF00);
+  Under2->set_all(0x00FF00);
+  Under3->set_all(0x00FF00);
+  Under4->set_all(0x00FF00);*/
+  wait(28,sec);
+  Top->gradient(0xFF0000,0xFF0005);
+  Under1->gradient(0xFF0000,0xFF0005);
+  Under2->gradient(0xFF0000,0xFF0005);
+  Under3->gradient(0xFF0000,0xFF0005);
+  Under4->gradient(0xFF0000,0xFF0005);
+  Top->cycle(**Top,10);
+  Under1->cycle(**Under1,10);
+  Under2->cycle(**Under2,10);
+  Under3->cycle(**Under3,10);
+  Under4->cycle(**Under4,10);
+  return 1;
 }
-
+void endgameWarning() {
+  task warn(endgameLEDHandler);
+}
 vex::task odom;
 
 float distToRot(float dist) {
@@ -1037,8 +1064,8 @@ namespace MotionController {
         d = (e-eRec)/dt;
         eRec = e;
         float speedDiff = kp*e + kd*d + ki*i;
-        float leftVoltage = fmin((speed+speedDiff)/9, 11);
-        float rightVoltage = fmin((speed-speedDiff)/9,11);
+        float leftVoltage = fmin((speed+speedDiff)/8.3, 12);
+        float rightVoltage = fmin((speed-speedDiff)/8.3,12);
         leftGroup.spin(distance > 0 ? fwd : reverse, leftVoltage, volt);
         rightGroup.spin(distance > 0 ? fwd : reverse, rightVoltage, volt);
         //leftGroup.setVelocity(speed + speedDiff,pct);
@@ -1066,8 +1093,8 @@ namespace MotionController {
         d = (e-eRec)/dt;
         eRec = e;
         float speedDiff = kp*e + kd*d + ki*i;
-        float leftVoltage = fmin((80+speedDiff)/9, 11);
-        float rightVoltage = fmin((80-speedDiff)/9,11);
+        float leftVoltage = fmin(11+(speedDiff)/9, 12);
+        float rightVoltage = fmin(11-(speedDiff)/9,12);
         leftGroup.spin(direction, leftVoltage, volt);
         rightGroup.spin(direction, rightVoltage, volt);
         //leftGroup.setVelocity(speed + speedDiff,pct);
@@ -1244,6 +1271,7 @@ namespace MotionController {
       float rightArc;
       float leftspeed;
       float rightspeed;
+      float maxSpeed = fmin(50+radius,100);
       if(side==right) {
         leftArc = (radius+drivetrainWidth/2)*radAngle;
         rightArc = (radius-drivetrainWidth/2)*radAngle;
@@ -1264,10 +1292,47 @@ namespace MotionController {
       
       float wantedLeftPosition = leftGroup.position(deg) + distToRot(leftArc);
       float wantedRightPosition = rightGroup.position(deg) + distToRot(rightArc);
-      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * 55, pct);
-      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * 55,pct);
+      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * maxSpeed, pct);
+      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
       wait(0.5,sec);
       for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
+        if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
+        wait(0.025,sec);
+      }
+    };
+  }
+  std::function<void()> arc(float radius, float rotation, turnType side, float timeout) {
+    return[=]() {
+      float radAngle = rotation/180*M_PI;
+      float leftArc;
+      float rightArc;
+      float leftspeed;
+      float rightspeed;
+      float maxSpeed = fmin(50+radius,100);
+      if(side==right) {
+        leftArc = (radius+drivetrainWidth/2)*radAngle;
+        rightArc = (radius-drivetrainWidth/2)*radAngle;
+      } else {
+        leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
+        rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
+      }
+      leftspeed = sqrtf(fabs(leftArc/rightArc));
+      rightspeed = sqrtf(fabs(rightArc/leftArc));
+      if(leftspeed >rightspeed)
+        {
+          rightspeed = rightspeed/leftspeed;
+          leftspeed=1;
+      }else{
+        leftspeed = leftspeed/rightspeed;
+        rightspeed=1;
+      }
+      
+      float wantedLeftPosition = leftGroup.position(deg) + distToRot(leftArc);
+      float wantedRightPosition = rightGroup.position(deg) + distToRot(rightArc);
+      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * maxSpeed, pct);
+      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
+      wait(0.5,sec);
+      for(double t=0; t<timeout; t+=0.025) {
         if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
         wait(0.025,sec);
       }
@@ -1303,7 +1368,7 @@ void pre_auton(void) {
   rightGroup.setVelocity(50, percent);
   sideTracking.resetPosition();
   forwardTracking.resetPosition();
-  hangSensor.setPosition(hangSensor.angle(),deg);
+  //hangSensor.setPosition(hangSensor.angle(),deg);
 }
 void brakeAll() {
   leftGroup.setStopping(brakeType::brake);
@@ -1314,10 +1379,10 @@ vex::task LED;
 int LEDRainbow() {
     std::uint32_t clock = sylib::millis();
     DescoreLEDS -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    DescoreLEDS -> cycle(Top -> buffer, 10);
+    DescoreLEDS -> cycle(Under3 -> buffer, 10);
 
-    Top -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
-    Top -> cycle(Top -> buffer, 10);
+    Under3 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
+    Under3 -> cycle(Under3 -> buffer, 10);
 
     Under1 -> gradient(0xFF0000, 0xFF0005, 0, 0, false, true);
     Under1 -> cycle(Under1 -> buffer, 10);
@@ -1353,27 +1418,59 @@ void oppositeSide(void) {
   toggleDescore();
   //straight(-22);
   turnToHeading(30);
-  arc(18, -30, right);
-  slam(reverse);
+  MotionController::chain({
+    MotionController::arc(24,-30,right),
+    MotionController::straight(reverse,0.5)
+  });
   straight(12);
   //smartTurn(-25);
   //turnToHeading(0);
-  turnToHeading(180);
+  smartTurn(180);
   Intake.spin(reverse);
   wait(0.5,sec);
   straight(17);
-  straight(-17);
-  turnToHeading(115);
-  straight(38);
-  turnToHeading(55);
-  straight(24,35);
+  straight(-14);
+  Intake.spin(fwd);
+  MotionController::chain({
+    MotionController::turnToHeading(113),
+    MotionController::straight(38),
+    MotionController::swingToHeading(right,270,fwd,1.5)
+  });
+  Intake.spin(reverse);
+  MotionController::chain({
+    MotionController::straight(fwd,1),
+    MotionController::straight(-10),
+    MotionController::turnToHeading(31),
+    MotionController::straight(38)
+  });
   //turnToHeading(110);
   //Intake.spin(fwd);
   //straight(44);
 }
 void oppositeSideUnsafe(void) {
-//odom = vex::task(runOdom);
-  //orientation = -90;
+  auto top = sylib::Addrled(22,8,22);
+  Top = &top;
+  auto block = sylib::Addrled(22,3,40);
+  DescoreLEDS = &block;
+  auto und1 = sylib::Addrled(22,7,9);
+  Under1 = &und1;
+  auto und2 = sylib::Addrled(22,6,11);
+  Under2 = &und2;
+  auto und3 = sylib::Addrled(22,5,19);
+  Under3 = &und3;
+  auto und4 = sylib::Addrled(22,4,19);
+  Under4 = &und4;
+  Top->gradient(0xC05DBF,0xFF6AAB);
+  Under1->gradient(0xC05DBF,0xFF6AAB);
+  Under2->gradient(0xC05DBF,0xFF6AAB);
+  Under3->gradient(0xC05DBF,0xFF6AAB);
+  Under4->gradient(0xC05DBF,0xFF6AAB);
+  Top->cycle(**Top,10);
+  Under1->cycle(**Under1,10);
+  Under2->cycle(**Under2,10);
+  Under3->cycle(**Under3,10);
+  Under4->cycle(**Under4,10);
+//orientation = -90;
   setInertial(90);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
@@ -1384,8 +1481,9 @@ void oppositeSideUnsafe(void) {
   Intake.spin(fwd);  
   straight(3, 35);
   //pp stuff
-  turnToHeading(88.5);
   wait(0.25,sec);
+  turnToHeading(88.5);
+  wait(0.5,sec);
   straight(-29, 60);
   Intake.stop();
   //turnToHeading(55);
@@ -1394,63 +1492,29 @@ void oppositeSideUnsafe(void) {
   toggleDescore();
   //straight(-22);
   turnToHeading(30);
-  arc(18, -30, right);
-  slam(reverse);
-  straight(10);
+  MotionController::chain({
+    MotionController::arc(24,-30,right),
+    MotionController::straight(reverse,0.5)
+  });
+  straight(12);
   //smartTurn(-25);
   //turnToHeading(0);
-  turnToHeading(180);
+  smartTurn(180);
   Intake.spin(reverse);
   wait(0.5,sec);
-  straight(13);
-  straight(-13);
-  turnToHeading(110,0.5);
+  straight(17);
+  straight(-14);
   Intake.spin(fwd);
-  smartStraight(44);
-  turnToHeading(225);
+  MotionController::chain({
+    MotionController::turnToHeading(113),
+    MotionController::straight(38),
+    MotionController::swingToHeading(right,270,fwd,1.5)
+  });
   Intake.spin(reverse);
-  wait(0.5,sec);
-  turnToHeading(170);
-  Intake.spin(fwd);
-  straight(24);
-  turnToHeading(90);
-  toggleDescore();
-  slam(reverse);
-  straight(12);
-  turnToHeading(270);
-  Intake.spin(reverse);
-  straight(12);
-  /*
-  //smartTurn(-25);
-  //simpleTurnToHeading(0);
-  turnToHeading(180, 1);
-  Intake.spin(reverse);
-  wait(0.5,sec);
-  straight(15);
-  straight(-17);
-  turnToHeading(110, 1);
-  Intake.spin(fwd);
-  smartStraight(44);
-  turnToHeading(180, 1);
-  Intake.stop();
-  smartStraight(25);
-  turnToHeading(270, 1);
-  Intake.spin(reverse);
-  wait(0.25,sec);
-  toggleWings();
-  straight(32);
-  straight(-19);
-  toggleWings();
-  turnToHeading(115);
-  Intake.spin(fwd);
-  straight(8);
-  wait(0.5,sec);
-  Intake.stop();
-  turnToHeading(270);
-  Intake.spin(reverse);
-  slam(fwd);
-  straight(-15);
-  */
+  MotionController::chain({
+    MotionController::straight(fwd,1.25),
+    MotionController::straight(6)
+  });
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
@@ -1508,47 +1572,48 @@ void sameSide(void) {
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
   vex::task run(releaseIntake);
-  turnToHeading(193.5);
   Intake.spin(fwd);
-  smartStraight(50);
-  wait(0.5,sec);
-  Intake.stop();
-  smartStraight(-50);
-  turnToHeading(270);
+  MotionController::chain({
+    MotionController::straight(42,100),
+    MotionController::arc(12,20,right),
+    MotionController::straight(-38),
+    MotionController::turnToHeading(295)
+  });
   Intake.spin(reverse);
-  straight(-4);
-  straight(28);
-  straight(-4);
+  wait(1,sec);
+  Intake.stop();
+  MotionController::chain({
+    MotionController::turnToHeading(115),
+    MotionController::straight(18.5),
+    MotionController::swingToHeading(right,135),
+    toggleDescore,
+    MotionController::straight(-15),
+    MotionController::turnToHeading(90,1),
+    toggleDescore,
+    MotionController::swingToHeading(left,120,fwd,1),
+    MotionController::straight(-16),
+    MotionController::turnToHeading(90,1),
+    MotionController::straight(-8)
+  });
+  brakeAll();
+
 }
 void AWPSameSide(void) {
 //odom = vex::task(runOdom);
   //orientation = -90;
-  setInertial(90);
+  setInertial(135);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
-  // score alliance triball to near net     
-  vex::task run(releaseIntake);
-  //turnToHeading(55);
-  arc(11,90,right);
-  //straight(-22);
-  turnToHeading(180);
-  straight(4);
+  straight(13);
   toggleDescore();
-  Intake.spinFor(-3,rev,false);
-  //runFunction1.function = toggleDescore;
-  //runFunction1.waitTime = 1250;
-  //vex::thread delay(delayExecution, &runFunction1);
-  arc(11, -60, right);
-  smartTurn(-40);
+  MotionController::run(MotionController::swingToHeading(right,90));
   toggleDescore();
-  turnToHeading(135);
-  Catapult.spinFor(1800,deg,false); 
-  straight(-10);
+  turnToHeading(120);
+  Catapult.spinFor(1700,deg,false);
+  straight(-18);
   turnToHeading(90);
-  straight(-28,70);
-  toggleDescore();
-  straight(-3,20);
-  smartTurn(20);
+  straight(-28);
+  straight(-6,20);
 }
 void oldProg(void) {
    inertialSensor.setHeading(90,deg);
@@ -1700,7 +1765,7 @@ void roomba(void) {
     MotionController::slam(fwd)
   });
 }
-void programmingSkills(void) {
+void progBeginning() {
   hang = false;
   //vex::task intake(releaseIntake);
   inertialSensor.setHeading(90,deg);
@@ -1715,9 +1780,10 @@ void programmingSkills(void) {
   MotionController::chain({
     MotionController::turnToHeading(180,0.25),
     MotionController::straight(10.5,80,180),
-    MotionController::turnToHeading(74)
+    MotionController::turnToHeading(71)
   });
   MotionController::run(MotionController::straight(-2));
+  MotionController::run(MotionController::turnToHeading(71));
   toggleDescore();
   toggleCata();
   float currentRotation = inertialSensor.rotation(deg);
@@ -1726,11 +1792,13 @@ void programmingSkills(void) {
   toggleCata();
   toggleDescore();
   togglePTO();
+  setInertial(currentHeading);
   MotionController::chain({
-    MotionController::turnToHeading(300),
-    MotionController::straight(-19.5),
+    MotionController::turnToHeading(305),
+    MotionController::straight(-25),
     MotionController::swingToHeading(right,270),
     MotionController::straight(-62),
+    /*
     MotionController::swingToHeading(right,225,fwd,0.75),
     MotionController::straight(-16),
     MotionController::swingToHeading(right,180,fwd,0.75),
@@ -1738,41 +1806,152 @@ void programmingSkills(void) {
     MotionController::straight(6,80,180),
     MotionController::turnToHeading(180,0.5),
     MotionController::straight(reverse,0.75,msec,180),
-    MotionController::straight(12)
+    MotionController::straight(14)
+    */
+  });
+}
+void programmingSkills(void) {
+  hang = false;
+  Catapult.setStopping(coast);
+  //vex::task intake(releaseIntake);
+  inertialSensor.setHeading(90,deg);
+  inertialSensor.setRotation(90,deg);
+  orientation = -90;
+  //odom = task(runOdom);
+  currentPosition = {36,12};
+  MotionController::chain({
+    MotionController::arc(13,90,left),
+    MotionController::straight(reverse,0.5)
   });
   MotionController::chain({
-    MotionController::swingToHeading(right,115),
-    MotionController::straight(-20),
-    MotionController::swingToHeading(left,245),
+    MotionController::turnToHeading(180,0.25),
+    MotionController::straight(10.5,80,180),
+    MotionController::turnToHeading(69)
+  });
+  MotionController::run(MotionController::straight(-3));
+  MotionController::run(MotionController::turnToHeading(69,0.5,0.5));
+  toggleDescore();
+  toggleCata();
+  float currentRotation = inertialSensor.rotation(deg);
+  float currentHeading = inertialSensor.heading(deg);
+  vex::wait(24.5,sec);
+  //waitUntil(Controller1.ButtonA.pressing());
+  toggleCata();
+  toggleDescore();
+  //togglePTO();
+  setInertial(currentHeading);
+  MotionController::chain({
+    MotionController::straight(2),
+    MotionController::turnToHeading(310),
+    MotionController::straight(-23.5),
+    MotionController::swingToHeading(right,270),
+    MotionController::straight(-60),
+    MotionController::arc(18,-90,right),
+    MotionController::straight(reverse,1),
+    MotionController::straight(12),
+    MotionController::straight(reverse,1),
+    MotionController::straight(12),
+    MotionController::straight(reverse,1),
+    // MotionController::swingToHeading(right,225,fwd,0.75),
+    // MotionController::straight(-16),
+    // MotionController::swingToHeading(right,180,fwd,0.3),
+    // MotionController::straight(reverse,0.5),
+    // MotionController::straight(8,80,180),
+    // MotionController::straight(reverse,1),
+    MotionController::straight(14)
+  });
+  MotionController::chain({ 
+    MotionController::swingToHeading(right,105,fwd,1),
+    MotionController::straight(-24),
+    MotionController::swingToHeading(left,265,fwd,1),
     toggleDescore,
-    MotionController::arc(25,25,left),
+    MotionController::straight(reverse,1),
+    MotionController::straight(14),
     MotionController::straight(reverse,1)
   });
+  /*
   MotionController::chain({
     MotionController::straight(4),
     toggleDescore,
     MotionController::turnToHeading(90),
     MotionController::straight(-8),
-    MotionController::swing(left,180),
+    MotionController::swing(left,60),
+    MotionController::straight(-5),
+    MotionController::swing(left,120),
     toggleDescore,
-    MotionController::straight(reverse,1.5)
+    MotionController::straight(reverse,2)
   });
-  MotionController::chain({
-    MotionController::arc(40,45,right),
+  */
+ MotionController::chain({
+    MotionController::straight(4),
+    toggleDescore,
+    MotionController::turnToHeading(90),
+    MotionController::straight(-3),
+    MotionController::swing(left,180,0.5),
+    MotionController::swingToHeading(left,270,fwd,1),
+    toggleDescore,
+    MotionController::straight(reverse,1),
+    MotionController::straight(12),
+    MotionController::straight(reverse,1)
+  });
+  
+  //vex::task hang(hangSetup);
+  /*MotionController::chain({
+    MotionController::arc(35,45,right),
     toggleDescore,  
-    MotionController::swingToHeading(right,90),
-    MotionController::straight(40),
-    MotionController::swingToHeading(right,0),
+    MotionController::swingToHeading(right,75),
+    MotionController::straight(38),
+    MotionController::swingToHeading(right,180),
     MotionController::straight(-4),
     MotionController::straight(fwd,1)
-  });
+  });*/
   MotionController::chain({
-    MotionController::swingToHeading(left,315,fwd,0.5),
-    MotionController::straight(27.5),
-    MotionController::swingToHeading(left,270),
-    MotionController::straight(40)
+    MotionController::straight(2),
+    toggleDescore,
+    MotionController::turnToHeading(7),
+    MotionController::straight(38),
+    MotionController::turnToHeading(90),
+    MotionController::arc(16,90,right),
+    MotionController::straight(fwd,1),
+    MotionController::straight(-8),
+    MotionController::straight(fwd,1),
+    MotionController::straight(-8),
+    MotionController::turnToHeading(0),
+    MotionController::straight(reverse,1)
   });
-  vex::task gaming(sideHang);
+
+  // MotionController::chain({
+  //   MotionController::swingToHeading(right,120),
+  //   MotionController::straight(-40),
+  //   MotionController::swingToHeading(left,90),
+  //   MotionController::straight(24),
+  //   MotionController::swingToHeading(right,135),
+  //   MotionController::straight(24),
+  //   MotionController::swingToHeading(right,180,fwd,0.3),
+  //   MotionController::straight(fwd,1)
+  // });
+  /*if(hangSensor.position(deg)>400) {
+    MotionController::chain({
+      MotionController::straight(-4),
+      MotionController::turnToHeading(315),
+      MotionController::straight(24),
+      MotionController::swingToHeading(left,270),
+      MotionController::straight(40)
+    });
+    vex::task gaming(sideHang);
+  } else {*/
+    MotionController::chain({
+      MotionController::straight(4),
+      MotionController::swingToHeading(right,75),
+      MotionController::straight(-40),
+      MotionController::swing(right,-165),
+      toggleDescore,
+      MotionController::straight(reverse,1),
+      MotionController::straight(6),
+      toggleDescore
+    });
+  //}
+  
 }
 void testing(void) {
   odom = vex::task(runOdom);
@@ -1812,12 +1991,12 @@ void testPID(void) {
 }
 void testHang(void) {
   releaseIntake();
-  hangSetup();
+  //hangSetup();
   straight(24);
   Catapult.spinFor(reverse, 1500, deg);
 }
 void usercontrol(void) {
-  hang = false;
+  hang = true;
   //pre_auton();
   //currentPosition = {36,12};
   //inertialSensor.setRotation(90,deg);
@@ -1825,7 +2004,30 @@ void usercontrol(void) {
   //orientation = -90;
   //odom = vex::task(runOdom);
   //odom.stop();
+  auto top = sylib::Addrled(22,8,22);
+  Top = &top;
+  auto block = sylib::Addrled(22,3,40);
+  DescoreLEDS = &block;
+  auto und1 = sylib::Addrled(22,7,9);
+  Under1 = &und1;
+  auto und2 = sylib::Addrled(22,6,11);
+  Under2 = &und2;
+  auto und3 = sylib::Addrled(22,5,19);
+  Under3 = &und3;
+  auto und4 = sylib::Addrled(22,4,19);
+  Under4 = &und4;
+  Top->gradient(0xC05DBF,0xFF6AAB);
+  Under1->gradient(0xC05DBF,0xFF6AAB);
+  Under2->gradient(0xC05DBF,0xFF6AAB);
+  Under3->gradient(0xC05DBF,0xFF6AAB);
+  Under4->gradient(0xC05DBF,0xFF6AAB);
+  Top->cycle(**Top,10);
+  Under1->cycle(**Under1,10);
+  Under2->cycle(**Under2,10);
+  Under3->cycle(**Under3,10);
+  Under4->cycle(**Under4,10);
   std::uint32_t clock = sylib::millis();
+  vex::timer::event(endgameWarning,75000);
   Intake.setVelocity(100,pct);
   int deadband = 1;
   bool intakeMode = true;
@@ -1836,18 +2038,25 @@ void usercontrol(void) {
   Controller1.ButtonLeft.pressed(togglePTO);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   //vex::task printCoords(printOdom);
-  /*
-  auto block = sylib::Addrled(22,8,40);
-  DescoreLEDS = &block;
-  auto und1 = sylib::Addrled(22,7,14);
-  Under1 = &und1;
-  auto und2 = sylib::Addrled(22,6,13);
-  Under2 = &und2;
-  auto top = sylib::Addrled(22,5,23);
-  Top = &top;
-  vex::task leds(handleLEDs);*/
+  //vex::task leds(handleLEDs);
+  // Top -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  // Top -> cycle(**Top, 10);
+  // Under1 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  // Under1 -> cycle(**Under1, 10);
+  // Under2 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  // Under2 -> cycle(**Under2, 10);
+  // Under3 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  // Under3 -> cycle(**Under3, 10);
+  // Under4 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  // Under4 -> cycle(**Under4, 10);
   //currentPosition = {0,0};
+  
   while (true) {
+    // Top -> cycle(**Top, 10);
+    // Under1 -> cycle(**Under1, 10);
+    // Under2 -> cycle(**Under2, 10);
+    // Under3 -> cycle(**Under3, 10);
+    // Under4 -> cycle(**Under4, 10);
     //tank drive
     sylib::delay_until(&clock, 10);
     // Get the velocity percentage of the left motor. (Axis3)
@@ -1857,8 +2066,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? -1 : 1) * (signum(Controller1.Axis3.position())*pow(Controller1.Axis3.position(),2)/50 + (intakeMode ? -1 : 1) * 0.35 * signum(Controller1.Axis1.position())*pow(Controller1.Axis1.position(),2)/55);
-    int rightMotorSpeed = (intakeMode ? -1 : 1) * (signum(Controller1.Axis3.position())*pow(Controller1.Axis3.position(),2)/50 + (intakeMode ? 1 : -1) * 0.35 * signum(Controller1.Axis1.position())*pow(Controller1.Axis1.position(),2)/55);
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? -1 : 1) * 0.35 * (Controller1.Axis1.position()));
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? 1 : -1) * 0.35 * (Controller1.Axis1.position()));
 
     //cycle based on robot speed
     //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
@@ -1877,7 +2086,7 @@ void usercontrol(void) {
     } else if (Controller1.ButtonDown.pressing()) {
       intakeMode = false;
     }
-    if(hang) {
+    //if(hang) {
       // OUTTAKE
       if(Controller1.ButtonR1.pressing()) {
           Catapult.spin(fwd);
@@ -1886,12 +2095,12 @@ void usercontrol(void) {
       } else if(!catatoggle){
           Catapult.stop();
       }
-    } else {
+    //} else {
       // Single Catapult Cycle
-      if(Controller1.ButtonA.pressing()) {
-        Catapult.spin(fwd);
-      }
-    }
+    //  if(Controller1.ButtonA.pressing()) {
+    //    Catapult.spin(fwd);
+    //  }
+    //}
     if (Controller1.ButtonL1.pressing()) {
         Intake.spin(fwd, 100, pct);
       } else if (Controller1.ButtonL2.pressing()) {
@@ -1918,15 +2127,25 @@ void usercontrol(void) {
   }
 }
 void driverSkills(void) {
+  hang = false;
+  //vex::task intake(releaseIntake);
   inertialSensor.setHeading(90,deg);
-  arc(18,90,left);
-  slam(reverse);
-  straight(11);
-  turnToHeading(73.5);
-  straight(-3);
-  turnToHeading(69);
-  float realOrientation = inertialSensor.heading(deg);
-  toggleWings();
+  inertialSensor.setRotation(90,deg);
+  orientation = -90;
+  //odom = task(runOdom);
+  currentPosition = {36,12};
+  MotionController::chain({
+    MotionController::arc(13.5,90,left),
+    MotionController::straight(reverse,0.5)
+  });
+  MotionController::chain({
+    MotionController::turnToHeading(180,0.25),
+    MotionController::straight(10.5,80,180),
+    MotionController::turnToHeading(67)
+  });
+  MotionController::run(MotionController::straight(-2));
+  MotionController::run(MotionController::turnToHeading(67));
+  toggleDescore();
   toggleCata();
   usercontrol();
 }
@@ -1943,10 +2162,10 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  //Competition.autonomous(oppositeSideUnsafe);
+  Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
-  Competition.autonomous(programmingSkills);
+  //Competition.autonomous(programmingSkills);
   //Competition.autonomous(odomSkills);
   //Competition.autonomous(oldProg);
   //Competition.autonomous(testing);
