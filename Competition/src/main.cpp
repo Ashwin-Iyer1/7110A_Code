@@ -124,24 +124,21 @@ void toggleDescore() {
 //   Catapult.stop();
 //   return 1;
 // }
-void togglePTO() {
-  pto.set(!pto.value());
-  if(!hang) {
-    //Catapult.spin(fwd);
-  }
-  hang = !hang;
-  if(hang) {
-    Catapult.setStopping(brake);
-  } else {
-    Catapult.setStopping(coast);
-  }
-  //task move(movePTOGear);
+void toggleHang() {
+  Hang.set(!Hang.value());
+}
+int waitForHang() {
+  waitUntil(Controller1.ButtonA.pressing() && Controller1.ButtonB.pressing());
+  toggleHang();
+  return 1;
+}
+void readyHang() {
+  Controller1.rumble("...--");
+  vex::task h(waitForHang);
 }
 
 int releaseIntake() {
-  //Intake.spinFor(-1,rev,false);
-  Catapult.spinFor(fwd, 300, deg);
-  Catapult.spinFor(reverse, 650, deg);
+  Intake.spinFor(1,rev,false);
   return 1;
 }
 
@@ -1014,7 +1011,9 @@ void testPID(void) {
   //straight(70);
 }
 void usercontrol(void) {
-  hang = true;
+  Chassis::init(vex::motor_group(FrontLeft,MidLeft,BackLeft),vex::motor_group(FrontRight,MidRight,BackRight));
+  Wings.set(false);
+  Descore.set(false);
   //pre_auton();
   //currentPosition = {36,12};
   //inertialSensor.setRotation(90,deg);
@@ -1022,6 +1021,7 @@ void usercontrol(void) {
   //orientation = -90;
   //odom = vex::task(runOdom);
   //odom.stop();
+  /*
   auto top = sylib::Addrled(22,8,22);
   Top = &top;
   auto block = sylib::Addrled(22,3,40);
@@ -1043,17 +1043,16 @@ void usercontrol(void) {
   Under1->cycle(**Under1,10);
   Under2->cycle(**Under2,10);
   Under3->cycle(**Under3,10);
-  Under4->cycle(**Under4,10);
-  std::uint32_t clock = sylib::millis();
-  vex::timer::event(endgameWarning,75000);
+  Under4->cycle(**Under4,10);*/
+  //std::uint32_t clock = sylib::millis();
+  //vex::timer::event(endgameWarning,75000);
   Intake.setVelocity(100,pct);
   int deadband = 1;
   bool intakeMode = true;
-  Controller1.ButtonB.pressed(toggleCata);
-  Controller1.ButtonA.released(stopCata);
-  Controller1.ButtonY.pressed(toggleWings);
-  Controller1.ButtonX.pressed(toggleDescore);
-  Controller1.ButtonLeft.pressed(togglePTO);
+  Controller1.ButtonB.pressed(toggleHang);
+  Controller1.ButtonR1.pressed(toggleWings);
+  Controller1.ButtonR2.pressed(toggleDescore);
+  //Controller1.ButtonLeft.pressed(toggleHang);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   //vex::task printCoords(printOdom);
   //vex::task leds(handleLEDs);
@@ -1076,7 +1075,7 @@ void usercontrol(void) {
     // Under3 -> cycle(**Under3, 10);
     // Under4 -> cycle(**Under4, 10);
     //tank drive
-    sylib::delay_until(&clock, 10);
+    //sylib::delay_until(&clock, 10);
     // Get the velocity percentage of the left motor. (Axis3)
     //int leftMotorSpeed = intakeMode ? Controller1.Axis3.position() : (-Controller1.Axis2.position());
     // Get the velocity percentage of the right motor. (Axis2)
@@ -1084,8 +1083,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? -1 : 1) * 0.35 * (Controller1.Axis1.position()));
-    int rightMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? 1 : -1) * 0.35 * (Controller1.Axis1.position()));
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? -1 : 1) * (Controller1.Axis1.position()));
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? 1 : -1) * (Controller1.Axis1.position()));
 
     //cycle based on robot speed
     //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
@@ -1104,21 +1103,6 @@ void usercontrol(void) {
     } else if (Controller1.ButtonDown.pressing()) {
       intakeMode = false;
     }
-    //if(hang) {
-      // OUTTAKE
-      if(Controller1.ButtonR1.pressing()) {
-          Catapult.spin(fwd);
-      } else if (Controller1.ButtonR2.pressing()) {
-          Catapult.spin(directionType::rev);
-      } else if(!catatoggle){
-          Catapult.stop();
-      }
-    //} else {
-      // Single Catapult Cycle
-    //  if(Controller1.ButtonA.pressing()) {
-    //    Catapult.spin(fwd);
-    //  }
-    //}
     if (Controller1.ButtonL1.pressing()) {
         Intake.spin(fwd, 100, pct);
       } else if (Controller1.ButtonL2.pressing()) {
@@ -1179,8 +1163,8 @@ int main() {
   pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
-  //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideUnsafe);
+  Competition.autonomous(oppositeSide);
+  //Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);

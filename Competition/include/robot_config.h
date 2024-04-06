@@ -20,7 +20,7 @@ extern vex::rotation sideTracking;
 extern vex::rotation forwardTracking;
 //extern vex::rotation hangSensor;
 
-extern vex::pneumatics pto;
+extern vex::pneumatics Hang;
 extern vex::pneumatics Descore;
 extern vex::pneumatics Wings;
 

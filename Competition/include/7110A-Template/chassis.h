@@ -10,6 +10,7 @@ namespace Chassis {
     extern float gearRatio;
     extern float drivetrainWidth;
 
+    void init(vex::motor_group leftMotors, vex::motor_group rightMotors);
     void init(vex::motor_group leftMotors, vex::motor_group rightMotors, int32_t inertialPort, float wheelDiam, float gr, float driveWidth);
     void setInertial(float d);
 

@@ -9,6 +9,10 @@ namespace Chassis {
     float wheelDiameter;
     float gearRatio;
     float drivetrainWidth;
+    void init(vex::motor_group leftMotors, vex::motor_group rightMotors) {
+        leftGroup = leftMotors;
+        rightGroup = rightMotors;
+    }
     void init(vex::motor_group leftMotors, vex::motor_group rightMotors, int32_t inertialPort, float wheelDiam, float gr, float driveWidth) {
         leftGroup = leftMotors;
         rightGroup = rightMotors;

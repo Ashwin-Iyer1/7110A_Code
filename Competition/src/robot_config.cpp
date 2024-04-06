@@ -16,16 +16,16 @@ motor      FrontRight =           motor(PORT4, ratio6_1, false);
 motor      MidRight =             motor(PORT5, ratio6_1, false);
 motor      BackRight =            motor(PORT17, ratio6_1, false);
 motor      Catapult1 =            motor(PORT10, ratio18_1, true);
-motor      Catapult2 =            motor(PORT9, ratio18_1, false);
+motor      Catapult2 =            motor(PORT9, ratio18_1, true);
 motor      Intake =               motor(PORT8, ratio18_1, true);
 
 rotation   sideTracking =      rotation(PORT19);
 rotation   forwardTracking =   rotation(PORT6);
 //rotation   hangSensor =        rotation(PORT14);
 
-pneumatics pto =             pneumatics(Brain.ThreeWirePort.A);
+pneumatics Hang =             pneumatics(Brain.ThreeWirePort.A);
 pneumatics Descore =         pneumatics(Brain.ThreeWirePort.B);
-pneumatics Wings =           pneumatics(Brain.ThreeWirePort.C);
+pneumatics Wings =           pneumatics(Brain.ThreeWirePort.D);
 
 motor_group Catapult =   motor_group(Catapult1, Catapult2);
 
