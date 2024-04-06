@@ -48,7 +48,7 @@ rotation   sideTracking =      rotation(PORT19);
 rotation   forwardTracking =   rotation(PORT6);
 //rotation   hangSensor =        rotation(PORT14);
 
-pneumatics pto =             pneumatics(Brain.ThreeWirePort.A);
+pneumatics Hang =             pneumatics(Brain.ThreeWirePort.A);
 pneumatics Descore =         pneumatics(Brain.ThreeWirePort.B);
 pneumatics Wings =           pneumatics(Brain.ThreeWirePort.C);
 
@@ -172,24 +172,12 @@ void toggleDescore() {
 //   Catapult.stop();
 //   return 1;
 // }
-void togglePTO() {
-  pto.set(!pto.value());
-  if(!hang) {
-    //Catapult.spin(fwd);
-  }
-  hang = !hang;
-  if(hang) {
-    Catapult.setStopping(brake);
-  } else {
-    Catapult.setStopping(coast);
-  }
-  //task move(movePTOGear);
+void toggleHang() {
+  Hang.set(!Hang.value());
 }
 
 int releaseIntake() {
-  //Intake.spinFor(-1,rev,false);
-  Catapult.spinFor(fwd, 300, deg);
-  Catapult.spinFor(reverse, 650, deg);
+  Intake.spinFor(-1,rev,false);
   return 1;
 }
 
@@ -1141,7 +1129,7 @@ namespace MotionController {
       float dt = 0.02;
       float kp = 1.5;
       float kd = 0.11;
-      float ki = 0.20;
+      float ki = 0.15;
       if(rotation<0) {
         float kp = 1.5;
         float kd = 0.11;
@@ -1366,8 +1354,8 @@ void pre_auton(void) {
   leftGroup.setStopping(coast);
   rightGroup.setStopping(coast);
   rightGroup.setVelocity(50, percent);
-  sideTracking.resetPosition();
-  forwardTracking.resetPosition();
+  Wings.set(false);
+  Descore.set(false);
   //hangSensor.setPosition(hangSensor.angle(),deg);
 }
 void brakeAll() {
@@ -1434,7 +1422,7 @@ void oppositeSide(void) {
   MotionController::chain({
     MotionController::turnToHeading(113),
     MotionController::straight(38),
-    MotionController::swingToHeading(right,270,fwd,1.5)
+    MotionController::swingToHeading(right,260,fwd,1.5)
   });
   Intake.spin(reverse);
   MotionController::chain({
@@ -1572,12 +1560,18 @@ void sameSide(void) {
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
   vex::task run(releaseIntake);
+  MotionController::run(MotionController::straight(30,100));
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::straight(42,100),
-    MotionController::arc(12,20,right),
+    MotionController::arc(18,15,right),
+    toggleWings,
+    MotionController::turnToHeading(270),
+    MotionController::straight(16),
+    toggleWings,
+    MotionController::straight(-16),
+    MotionController::turnToHeading(200),
     MotionController::straight(-38),
-    MotionController::turnToHeading(295)
+    MotionController::turnToHeading(270)
   });
   Intake.spin(reverse);
   wait(1,sec);
@@ -1791,7 +1785,7 @@ void progBeginning() {
   vex::wait(26,sec);
   toggleCata();
   toggleDescore();
-  togglePTO();
+  //togglePTO();
   setInertial(currentHeading);
   MotionController::chain({
     MotionController::turnToHeading(305),
@@ -1983,7 +1977,7 @@ void testing(void) {
 void testPID(void) {
   for(int i=6; i>0; i--) {
     for(int j=0; j<i; j++) {
-      MotionController::run(MotionController::swing(right,-360/i));
+      MotionController::run(MotionController::turn(360/i));
       //straight(12);
     }
   }
@@ -2004,38 +1998,12 @@ void usercontrol(void) {
   //orientation = -90;
   //odom = vex::task(runOdom);
   //odom.stop();
-  auto top = sylib::Addrled(22,8,22);
-  Top = &top;
-  auto block = sylib::Addrled(22,3,40);
-  DescoreLEDS = &block;
-  auto und1 = sylib::Addrled(22,7,9);
-  Under1 = &und1;
-  auto und2 = sylib::Addrled(22,6,11);
-  Under2 = &und2;
-  auto und3 = sylib::Addrled(22,5,19);
-  Under3 = &und3;
-  auto und4 = sylib::Addrled(22,4,19);
-  Under4 = &und4;
-  Top->gradient(0xC05DBF,0xFF6AAB);
-  Under1->gradient(0xC05DBF,0xFF6AAB);
-  Under2->gradient(0xC05DBF,0xFF6AAB);
-  Under3->gradient(0xC05DBF,0xFF6AAB);
-  Under4->gradient(0xC05DBF,0xFF6AAB);
-  Top->cycle(**Top,10);
-  Under1->cycle(**Under1,10);
-  Under2->cycle(**Under2,10);
-  Under3->cycle(**Under3,10);
-  Under4->cycle(**Under4,10);
-  std::uint32_t clock = sylib::millis();
-  vex::timer::event(endgameWarning,75000);
   Intake.setVelocity(100,pct);
   int deadband = 1;
   bool intakeMode = true;
-  Controller1.ButtonB.pressed(toggleCata);
-  Controller1.ButtonA.released(stopCata);
-  Controller1.ButtonY.pressed(toggleWings);
-  Controller1.ButtonX.pressed(toggleDescore);
-  Controller1.ButtonLeft.pressed(togglePTO);
+  Controller1.ButtonB.pressed(toggleHang);
+  Controller1.ButtonR1.pressed(toggleWings);
+  Controller1.ButtonR2.pressed(toggleDescore);
   // Controller1.ButtonLeft.pressed(cataMatchLoad);
   //vex::task printCoords(printOdom);
   //vex::task leds(handleLEDs);
@@ -2058,7 +2026,6 @@ void usercontrol(void) {
     // Under3 -> cycle(**Under3, 10);
     // Under4 -> cycle(**Under4, 10);
     //tank drive
-    sylib::delay_until(&clock, 10);
     // Get the velocity percentage of the left motor. (Axis3)
     //int leftMotorSpeed = intakeMode ? Controller1.Axis3.position() : (-Controller1.Axis2.position());
     // Get the velocity percentage of the right motor. (Axis2)
@@ -2066,8 +2033,8 @@ void usercontrol(void) {
 
 
     //split drive
-    int leftMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? -1 : 1) * 0.35 * (Controller1.Axis1.position()));
-    int rightMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? 1 : -1) * 0.35 * (Controller1.Axis1.position()));
+    int leftMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? -1 : 1) * 0.65 * (Controller1.Axis1.position()));
+    int rightMotorSpeed = (intakeMode ? -1 : 1) * ((Controller1.Axis3.position()) + (intakeMode ? 1 : -1) * 0.65 * (Controller1.Axis1.position()));
 
     //cycle based on robot speed
     //addrled.cycle(*addrled, ((leftMotorSpeed + rightMotorSpeed)/10));
@@ -2162,9 +2129,9 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideUnsafe);
+  //Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
-  //Competition.autonomous(sameSide);
+  Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(odomSkills);
   //Competition.autonomous(oldProg);
