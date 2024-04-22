@@ -1128,13 +1128,13 @@ namespace MotionController {
       float eRec = 0;
       float dt = 0.02;
       float kp = 1.5;
-      float kd = 0.11;
-      float ki = 0.15;
-      if(rotation<0) {
-        float kp = 1.5;
-        float kd = 0.11;
-        float ki = 0.20;
-      }
+      float kd = 0.1;
+      float ki = 0.0;
+      //if(rotation<0) {
+      //  float kp = 1.5;
+      //  float kd = 0.0;
+      //  float ki = 0.0;
+      //}
       float t=0;
       double currAngle = inertialSensor.rotation(deg);
       double wantedAngle = currAngle + rotation;
@@ -1152,9 +1152,9 @@ namespace MotionController {
           voltage = 11;
         } else if(voltage<-11) {
           voltage = -11;
-        } else if(fabs(voltage)<2) {
-          if(voltage<0) voltage = -2;
-          else voltage = 2;
+        } else if(fabs(voltage)<1.5) {
+          if(voltage<0) voltage = -1.5;
+          else voltage = 1.5;
         }
         leftGroup.spin(fwd, voltage, volt);
         rightGroup.spin(reverse, voltage, volt);
@@ -1383,10 +1383,7 @@ int LEDRainbow() {
   return 1;
 }*/
 void oppositeSide(void) {
-//odom = vex::task(runOdom);
-  //orientation = -90;
   setInertial(90);
-  //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
   vex::task run(releaseIntake);
@@ -1394,9 +1391,8 @@ void oppositeSide(void) {
   wait(0.5, sec);
   Intake.spin(fwd);  
   straight(3, 35);
-  //pp stuff
   wait(0.25,sec);
-  turnToHeading(88.5);
+  //turnToHeading(88.5);
   wait(0.5,sec);
   straight(-29, 60);
   Intake.stop();
@@ -1411,8 +1407,6 @@ void oppositeSide(void) {
     MotionController::straight(reverse,0.5)
   });
   straight(12);
-  //smartTurn(-25);
-  //turnToHeading(0);
   smartTurn(180);
   Intake.spin(reverse);
   wait(0.5,sec);
@@ -1421,7 +1415,7 @@ void oppositeSide(void) {
   Intake.spin(fwd);
   MotionController::chain({
     MotionController::turnToHeading(113),
-    MotionController::straight(38),
+    MotionController::straight(40),
     MotionController::swingToHeading(right,260,fwd,1.5)
   });
   Intake.spin(reverse);
@@ -1436,31 +1430,7 @@ void oppositeSide(void) {
   //straight(44);
 }
 void oppositeSideUnsafe(void) {
-  auto top = sylib::Addrled(22,8,22);
-  Top = &top;
-  auto block = sylib::Addrled(22,3,40);
-  DescoreLEDS = &block;
-  auto und1 = sylib::Addrled(22,7,9);
-  Under1 = &und1;
-  auto und2 = sylib::Addrled(22,6,11);
-  Under2 = &und2;
-  auto und3 = sylib::Addrled(22,5,19);
-  Under3 = &und3;
-  auto und4 = sylib::Addrled(22,4,19);
-  Under4 = &und4;
-  Top->gradient(0xC05DBF,0xFF6AAB);
-  Under1->gradient(0xC05DBF,0xFF6AAB);
-  Under2->gradient(0xC05DBF,0xFF6AAB);
-  Under3->gradient(0xC05DBF,0xFF6AAB);
-  Under4->gradient(0xC05DBF,0xFF6AAB);
-  Top->cycle(**Top,10);
-  Under1->cycle(**Under1,10);
-  Under2->cycle(**Under2,10);
-  Under3->cycle(**Under3,10);
-  Under4->cycle(**Under4,10);
-//orientation = -90;
   setInertial(90);
-  //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
   vex::task run(releaseIntake);
@@ -1468,7 +1438,6 @@ void oppositeSideUnsafe(void) {
   wait(0.5, sec);
   Intake.spin(fwd);  
   straight(3, 35);
-  //pp stuff
   wait(0.25,sec);
   turnToHeading(88.5);
   wait(0.5,sec);
@@ -1485,8 +1454,6 @@ void oppositeSideUnsafe(void) {
     MotionController::straight(reverse,0.5)
   });
   straight(12);
-  //smartTurn(-25);
-  //turnToHeading(0);
   smartTurn(180);
   Intake.spin(reverse);
   wait(0.5,sec);
@@ -1494,15 +1461,23 @@ void oppositeSideUnsafe(void) {
   straight(-14);
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::turnToHeading(113),
-    MotionController::straight(38),
-    MotionController::swingToHeading(right,270,fwd,1.5)
+    MotionController::turnToHeading(110),
+    MotionController::straight(40),
+    MotionController::turnToHeading(225)
+  });
+  Intake.spinFor(reverse,0.5,sec);
+  Intake.spin(fwd);
+  MotionController::chain({
+    MotionController::turnToHeading(160),
+    MotionController::straight(14),
+    MotionController::turnToHeading(260)
   });
   Intake.spin(reverse);
-  MotionController::chain({
-    MotionController::straight(fwd,1.25),
-    MotionController::straight(6)
-  });
+  toggleWings();
+  MotionController::run(MotionController::straight(fwd,1)); 
+  //turnToHeading(110);
+  //Intake.spin(fwd);
+  //straight(44);
 }
 void oppositeSideElim(void) {
   //start close to left of tile touching wall
@@ -2129,9 +2104,9 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  //Competition.autonomous(oppositeSideUnsafe);
+  Competition.autonomous(oppositeSideUnsafe);
   //Competition.autonomous(AWPSameSide);
-  Competition.autonomous(sameSide);
+  //Competition.autonomous(sameSide);
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(odomSkills);
   //Competition.autonomous(oldProg);
