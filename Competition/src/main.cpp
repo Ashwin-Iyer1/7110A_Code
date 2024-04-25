@@ -853,11 +853,8 @@ void oppositeSide(void) {
   //straight(-5);
   wait(0.5, sec);
   Intake.spin(fwd);  
-  straight(3, 35);
-  wait(0.25,sec);
-  //turnToHeading(88.5);
-  wait(0.5,sec);
-  straight(-29, 60);
+  straight(5, 35);
+  straight(-30, 60);
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
@@ -877,16 +874,21 @@ void oppositeSide(void) {
   straight(-14);
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::turnToHeading(113),
+    MotionController::turnToHeading(115),
     MotionController::straight(40),
-    MotionController::swingToHeading(right,260,fwd,1.5)
+    MotionController::swingToHeading(right,215,fwd,1.5)
   });
   Intake.spin(reverse);
   MotionController::chain({
+    MotionController::straight(10),
+    MotionController::turnToHeading(270),
+    toggleWings,
     MotionController::straight(fwd,1),
-    MotionController::straight(-10),
-    MotionController::turnToHeading(31),
-    MotionController::straight(38)
+    toggleWings,
+    MotionController::arc(21,-90,right),
+    MotionController::straight(-35),
+    toggleDescore,
+    MotionController::turn(-30)
   });
   //turnToHeading(110);
   //Intake.spin(fwd);
@@ -900,10 +902,8 @@ void oppositeSideUnsafe(void) {
   //straight(-5);
   wait(0.5, sec);
   Intake.spin(fwd);  
-  straight(3, 35);
+  MotionController::run(MotionController::straight(5, 35));
   wait(0.25,sec);
-  turnToHeading(88.5);
-  wait(0.5,sec);
   straight(-29, 60);
   Intake.stop();
   //turnToHeading(55);
@@ -917,27 +917,33 @@ void oppositeSideUnsafe(void) {
     MotionController::straight(reverse,0.5)
   });
   straight(12);
-  smartTurn(180);
+  MotionController::run(MotionController::turn(180));
   Intake.spin(reverse);
-  wait(0.5,sec);
   straight(17);
   straight(-14);
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::turnToHeading(110),
-    MotionController::straight(40),
+    MotionController::turnToHeading(113),
+    MotionController::straight(44),
     MotionController::turnToHeading(225)
   });
   Intake.spinFor(reverse,0.5,sec);
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::turnToHeading(160),
+    MotionController::turnToHeading(157),
     MotionController::straight(14),
-    MotionController::turnToHeading(260)
+    MotionController::turnToHeading(270)
   });
   Intake.spin(reverse);
   toggleWings();
   MotionController::run(MotionController::straight(fwd,1)); 
+  toggleWings();
+  MotionController::chain({
+    MotionController::arc(21,-90,right),
+    MotionController::straight(-40),
+    toggleDescore,
+    MotionController::turn(-30)
+  });
   //turnToHeading(110);
   //Intake.spin(fwd);
   //straight(44);
@@ -1036,16 +1042,18 @@ void AWPSameSide(void) {
   setInertial(135);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
-  straight(13);
+  straight(9);
   toggleDescore();
+  wait(0.5,sec);
   MotionController::run(MotionController::swingToHeading(right,90));
   toggleDescore();
-  turnToHeading(120);
-  Catapult.spinFor(1700,deg,false);
-  straight(-18);
-  turnToHeading(90);
-  straight(-28);
-  straight(-6,20);
+  straight(6);
+  turnToHeading(300);
+  Intake.spin(reverse);
+  toggleWings();
+  straight(21);
+  turnToHeading(270);
+  straight(29);
 }
 void testing(void) {
 
@@ -1067,8 +1075,13 @@ void testHang(void) {
 }
 void usercontrol(void) {
   hang = true;
-  auto top = sylib::Addrled(22,8,20);
+  auto top = sylib::Addrled(22,6,15);
   Top = &top;
+  auto under1 = sylib::Addrled(22,7,20);
+  Under1 = &under1;
+  auto under2 = sylib::Addrled(22,8,20);
+  Under2 = &under2;
+  
   //pre_auton();
   //currentPosition = {36,12};
   //inertialSensor.setRotation(90,deg);
@@ -1087,6 +1100,10 @@ void usercontrol(void) {
   //vex::task leds(handleLEDs);
   Top -> gradient(0x990000, 0x990005, 0, 0, false, true);
   Top -> cycle(**Top, 10);
+  Under2 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  Under2 -> cycle(**Under2, 10);
+  Under1 -> gradient(0x990000, 0x990005, 0, 0, false, true);
+  Under1 -> cycle(**Under1, 10);
   // Under1 -> gradient(0x990000, 0x990005, 0, 0, false, true);
   // Under1 -> cycle(**Under1, 10);
   // Under2 -> gradient(0x990000, 0x990005, 0, 0, false, true);
@@ -1184,8 +1201,8 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
-  Competition.autonomous(oppositeSideUnsafe);
-  //Competition.autonomous(AWPSameSide);
+  //Competition.autonomous(oppositeSideUnsafe);
+  Competition.autonomous(AWPSameSide);
   //Competition.autonomous(sameSide);
   //Competition.autonomous(testing);
   //Competition.autonomous(testPID);
