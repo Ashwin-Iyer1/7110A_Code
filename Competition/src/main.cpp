@@ -715,14 +715,14 @@ namespace MotionController {
     };
   }
   //performs an arc of size specified in degrees around a point of a given side of robot
-  std::function<void()> arc(float radius, float rotation, turnType side) {
+  std::function<void()> arc(float radius, float rotation, turnType side, float speed=50) {
     return[=]() {
       float radAngle = rotation/180*M_PI;
       float leftArc;
       float rightArc;
       float leftspeed;
       float rightspeed;
-      float maxSpeed = fmin(50+radius,100);
+      float maxSpeed = fmin(speed+radius,100);
       if(side==right) {
         leftArc = (radius+drivetrainWidth/2)*radAngle;
         rightArc = (radius-drivetrainWidth/2)*radAngle;
@@ -747,43 +747,6 @@ namespace MotionController {
       rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
       wait(0.5,sec);
       for(double t=0; t<fabs(fmax(fabs(leftArc),fabs(rightArc)))/20; t+=0.025) {
-        if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
-        wait(0.025,sec);
-      }
-    };
-  }
-  std::function<void()> arc(float radius, float rotation, turnType side, float timeout) {
-    return[=]() {
-      float radAngle = rotation/180*M_PI;
-      float leftArc;
-      float rightArc;
-      float leftspeed;
-      float rightspeed;
-      float maxSpeed = fmin(50+radius,100);
-      if(side==right) {
-        leftArc = (radius+drivetrainWidth/2)*radAngle;
-        rightArc = (radius-drivetrainWidth/2)*radAngle;
-      } else {
-        leftArc = -1*(radius-drivetrainWidth/2)*radAngle;
-        rightArc = -1*(radius+drivetrainWidth/2)*radAngle;
-      }
-      leftspeed = sqrtf(fabs(leftArc/rightArc));
-      rightspeed = sqrtf(fabs(rightArc/leftArc));
-      if(leftspeed >rightspeed)
-        {
-          rightspeed = rightspeed/leftspeed;
-          leftspeed=1;
-      }else{
-        leftspeed = leftspeed/rightspeed;
-        rightspeed=1;
-      }
-      
-      float wantedLeftPosition = leftGroup.position(deg) + distToRot(leftArc);
-      float wantedRightPosition = rightGroup.position(deg) + distToRot(rightArc);
-      leftGroup.spin(leftArc > 0 ? fwd : reverse, leftspeed * maxSpeed, pct);
-      rightGroup.spin(rightArc > 0 ? fwd : reverse, rightspeed * maxSpeed,pct);
-      wait(0.5,sec);
-      for(double t=0; t<timeout; t+=0.025) {
         if(signum(leftArc)*(wantedLeftPosition - leftGroup.position(deg)) < 0 && signum(rightArc)*(wantedRightPosition - rightGroup.position(deg)) < 0) break;
         wait(0.025,sec);
       }
@@ -854,7 +817,7 @@ void oppositeSide(void) {
   wait(0.5, sec);
   Intake.spin(fwd);  
   straight(5, 35);
-  straight(-30, 60);
+  straight(-28, 60);
   Intake.stop();
   //turnToHeading(55);
   toggleDescore();
@@ -863,30 +826,34 @@ void oppositeSide(void) {
   //straight(-22);
   turnToHeading(30);
   MotionController::chain({
-    MotionController::arc(24,-30,right),
-    MotionController::straight(reverse,0.5)
+    MotionController::straight(-5),
+    MotionController::swingToHeading(right,0),
+    MotionController::straight(reverse,0.75)
   });
   straight(12);
-  smartTurn(180);
+  MotionController::run(MotionController::turnToHeading(180));
   Intake.spin(reverse);
   wait(0.5,sec);
   straight(17);
   straight(-14);
   Intake.spin(fwd);
   MotionController::chain({
-    MotionController::turnToHeading(115),
+    MotionController::turnToHeading(107),
     MotionController::straight(40),
     MotionController::swingToHeading(right,215,fwd,1.5)
   });
-  Intake.spin(reverse);
+  Intake.stop();
   MotionController::chain({
     MotionController::straight(10),
     MotionController::turnToHeading(270),
+    [=]() {
+      Intake.spin(reverse);
+    },
     toggleWings,
     MotionController::straight(fwd,1),
     toggleWings,
     MotionController::arc(21,-90,right),
-    MotionController::straight(-35),
+    MotionController::straight(-34),
     toggleDescore,
     MotionController::turn(-30)
   });
@@ -1004,34 +971,34 @@ void sameSide(void) {
   Intake.setVelocity(100,pct);
   // score alliance triball to near net     
   vex::task run(releaseIntake);
-  MotionController::run(MotionController::straight(30,100));
-  Intake.spin(fwd);
   MotionController::chain({
-    MotionController::arc(18,15,right),
+    MotionController::straight(27,100),
+    [=]() {
+      Intake.spin(fwd);
+    },
+    MotionController::arc(18,15,right,100),
     toggleWings,
     MotionController::turnToHeading(270),
-    MotionController::straight(16),
+    [=]() {
+      Intake.spin(reverse);
+    },
+    MotionController::straight(fwd,1.25),
     toggleWings,
-    MotionController::straight(-16),
-    MotionController::turnToHeading(200),
-    MotionController::straight(-38),
-    MotionController::turnToHeading(270)
-  });
-  Intake.spin(reverse);
-  wait(1,sec);
-  Intake.stop();
-  MotionController::chain({
-    MotionController::turnToHeading(115),
-    MotionController::straight(18.5),
-    MotionController::swingToHeading(right,135),
-    toggleDescore,
-    MotionController::straight(-15),
-    MotionController::turnToHeading(90,1),
-    toggleDescore,
-    MotionController::swingToHeading(left,120,fwd,1),
-    MotionController::straight(-16),
-    MotionController::turnToHeading(90,1),
     MotionController::straight(-8)
+  });
+  MotionController::chain({
+    MotionController::turnToHeading(214.5),
+    MotionController::straight((inertialSensor.heading(deg)<265)? -45 : -47),
+    toggleDescore,
+    MotionController::turnToHeading(90),
+    toggleDescore
+  });
+  MotionController::chain({
+    MotionController::turnToHeading(295),
+    MotionController::straight(10),
+    MotionController::swingToHeading(left,270),
+    MotionController::straight(17),
+    MotionController::straight(2,35)
   });
   brakeAll();
 
@@ -1039,10 +1006,12 @@ void sameSide(void) {
 void AWPSameSide(void) {
 //odom = vex::task(runOdom);
   //orientation = -90;
+  vex::task release(releaseIntake);
   setInertial(135);
   //currentPosition = {58,132};
   Intake.setVelocity(100,pct);
-  straight(9);
+  straight(8);
+  brakeAll();
   toggleDescore();
   wait(0.5,sec);
   MotionController::run(MotionController::swingToHeading(right,90));
@@ -1050,10 +1019,10 @@ void AWPSameSide(void) {
   straight(6);
   turnToHeading(300);
   Intake.spin(reverse);
-  toggleWings();
   straight(21);
   turnToHeading(270);
-  straight(29);
+  straight(26);
+  straight(2.5,35);
 }
 void testing(void) {
 
