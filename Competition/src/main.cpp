@@ -995,7 +995,7 @@ void sameSide(void) {
   });
   MotionController::chain({
     MotionController::turnToHeading(295),
-    MotionController::straight(10),
+    MotionController::straight(13.5),
     MotionController::swingToHeading(left,270),
     MotionController::straight(17),
     MotionController::straight(2,35)
@@ -1171,8 +1171,8 @@ int main() {
   //Competition.autonomous(programmingSkills);
   //Competition.autonomous(oppositeSide);
   //Competition.autonomous(oppositeSideUnsafe);
-  Competition.autonomous(AWPSameSide);
-  //Competition.autonomous(sameSide);
+  //Competition.autonomous(AWPSameSide);
+  Competition.autonomous(sameSide);
   //Competition.autonomous(testing);
   //Competition.autonomous(testPID);
   //if(Competition.isEnabled()) selectAuton();
